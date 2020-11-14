@@ -14,13 +14,16 @@ defmodule FLHook.Client do
     GenServer.stop(pid, reason)
   end
 
-  def cmd(pid, cmd, args \\ []) do
-    Connection.call(pid, {:cmd, cmd, args})
+  def cmd(pid, cmd) do
+    Connection.call(pid, {:cmd, cmd})
   end
 
   # Server
 
   @welcome_msg "Welcome to FLHack"
+  @connect_timeout 2000
+  @recv_timeout 5000
+  @send_timeout 5000
 
   @impl true
   def init(opts) do
@@ -47,50 +50,45 @@ defmodule FLHook.Client do
   end
 
   @impl true
-  def connect(:init, state) do
-    case :gen_tcp.connect(to_charlist(state.host), state.port, [
-           :binary,
-           active: false
-         ]) do
-      {:ok, socket} ->
-        case read_msg(socket, state.socket_mode) do
-          {:ok, @welcome_msg <> _} ->
-            case send_msg(
-                   socket,
-                   state.socket_mode,
-                   "pass #{state.password}\r\n"
-                 ) do
-              :ok ->
-                case read_msg(socket, state.socket_mode) do
-                  {:ok, msg} ->
-                    # Set socket in active-once mode
-                    :ok = :gen_tcp.controlling_process(socket, self())
-                    :inet.setopts(socket, active: :once)
+  def connect(_, state) do
+    with {:connect, {:ok, socket}} <-
+           {:connect,
+            :gen_tcp.connect(
+              to_charlist(state.host),
+              state.port,
+              [:binary, active: false, send_timeout: @send_timeout],
+              @connect_timeout
+            )},
+         {:welcome, {:ok, @welcome_msg <> _}} <-
+           {:welcome, read_msg(socket, state.socket_mode)},
+         {:auth, :ok} <-
+           {:auth,
+            send_msg(
+              socket,
+              state.socket_mode,
+              "pass #{state.password}\r\n"
+            )},
+         {:auth_status, {:ok, "OK\r\n"}} <-
+           {:auth_status, read_msg(socket, state.socket_mode)} do
+      # Set socket in active-once mode
+      :ok = :gen_tcp.controlling_process(socket, self())
+      :inet.setopts(socket, active: :once)
+      {:ok, %{state | socket: socket}}
+    else
+      {:auth_status, {:ok, "ERR Wrong password\r\n"}} ->
+        {:stop, :wrong_password, state}
 
-                    {:ok, %{state | socket: socket}}
+      {_scope, {:error, reason}} ->
+        Logger.error(
+          "Unable to connect to #{state.host}:#{state.port} (#{inspect(reason)})"
+        )
 
-                  _ ->
-                    {:stop, :auth_failed, state}
-                end
-
-              _ ->
-                {:stop, :auth_failed, state}
-            end
-
-          {:ok, _} ->
-            {:stop, :invalid_socket, state}
-
-          _error ->
-            {:backoff, 1000, state}
-        end
-
-      {:error, _reason} ->
         {:backoff, 1000, state}
     end
   end
 
   defp read_msg(socket, mode) do
-    with {:ok, value} <- :gen_tcp.recv(socket, 0),
+    with {:ok, value} <- :gen_tcp.recv(socket, 0, @recv_timeout),
          {:ok, decoded} <- Coder.decode(mode, value) do
       Logger.debug("[RECV] #{String.trim_trailing(decoded)}")
       {:ok, decoded}
@@ -133,8 +131,9 @@ defmodule FLHook.Client do
   end
 
   @impl true
-  def handle_call({:cmd, cmd, args}, from, state) do
+  def handle_call({:cmd, cmd}, from, state) do
     queue = :queue.in(state.queue, %{from: from})
+    send_msg(state.socket, state.socket_mode, "#{cmd}\r\n")
     {:noreply, %{state | queue: queue}}
   end
 
