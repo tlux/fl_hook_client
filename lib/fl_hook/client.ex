@@ -1,6 +1,8 @@
 defmodule FLHook.Client do
   use Connection
 
+  require Logger
+
   alias FLHook.Coder
 
   def start_link(opts \\ []) do
@@ -18,12 +20,15 @@ defmodule FLHook.Client do
 
   # Server
 
+  @welcome_msg "Welcome to FLHack"
+
   @impl true
   def init(opts) do
     host = opts[:host] || "localhost"
     port = opts[:port] || 1920
     password = opts[:password]
-    encoding = opts[:encoding] || {:utf16, :little}
+    socket_mode = opts[:socket_mode] || :unicode
+    event_mode = opts[:event_mode] || false
 
     if password do
       {:connect, :init,
@@ -31,7 +36,8 @@ defmodule FLHook.Client do
          host: host,
          port: port,
          password: password,
-         encoding: encoding,
+         socket_mode: socket_mode,
+         event_mode: event_mode,
          socket: nil,
          queue: :queue.new()
        }}
@@ -42,21 +48,21 @@ defmodule FLHook.Client do
 
   @impl true
   def connect(:init, state) do
-    case :gen_tcp.connect(to_charlist(state.host), state.port, [:binary, active: false]) do
+    case :gen_tcp.connect(to_charlist(state.host), state.port, [
+           :binary,
+           active: false
+         ]) do
       {:ok, socket} ->
-        case :gen_tcp.recv(socket, 0) do
-          {:ok, welcome_msg} ->
-            Coder.decode(state.encoding, welcome_msg)
-
-            case :gen_tcp.send(
+        case read_msg(socket, state.socket_mode) do
+          {:ok, @welcome_msg <> _} ->
+            case send_msg(
                    socket,
-                   Coder.encode(state.encoding, "pass #{state.password}\r\n")
+                   state.socket_mode,
+                   "pass #{state.password}\r\n"
                  ) do
               :ok ->
-                case :gen_tcp.recv(socket, 0) do
+                case read_msg(socket, state.socket_mode) do
                   {:ok, msg} ->
-                    Coder.decode(state.encoding, msg)
-
                     # Set socket in active-once mode
                     :ok = :gen_tcp.controlling_process(socket, self())
                     :inet.setopts(socket, active: :once)
@@ -71,13 +77,32 @@ defmodule FLHook.Client do
                 {:stop, :auth_failed, state}
             end
 
+          {:ok, _} ->
+            {:stop, :invalid_socket, state}
+
           _error ->
             {:backoff, 1000, state}
         end
 
-      {:error, reason} ->
-        IO.inspect(reason)
+      {:error, _reason} ->
         {:backoff, 1000, state}
+    end
+  end
+
+  defp read_msg(socket, mode) do
+    with {:ok, value} <- :gen_tcp.recv(socket, 0),
+         {:ok, decoded} <- Coder.decode(mode, value) do
+      Logger.debug("[RECV] #{String.trim_trailing(decoded)}")
+      {:ok, decoded}
+    end
+  end
+
+  defp send_msg(socket, mode, value) do
+    Logger.debug("[SEND] #{String.trim_trailing(value)}")
+
+    with {:ok, encoded} <- Coder.encode(mode, value),
+         :ok <- :gen_tcp.send(socket, encoded) do
+      :ok
     end
   end
 
@@ -102,7 +127,9 @@ defmodule FLHook.Client do
 
   @impl true
   def terminate(_reason, state) do
-    :gen_tcp.close(state.socket)
+    if state.socket do
+      :gen_tcp.close(state.socket)
+    end
   end
 
   @impl true
@@ -113,8 +140,6 @@ defmodule FLHook.Client do
 
   @impl true
   def handle_info({:tcp, socket, data}, state) do
-    IO.inspect(Coder.decode(state.encoding, data))
-
     queue =
       case :queue.out(state.queue) do
         {{:value, %{from: from}}, queue} ->
