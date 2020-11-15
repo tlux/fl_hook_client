@@ -1,13 +1,15 @@
 defmodule FLHook.Client.Reply do
   @moduledoc false
 
+  alias FLHook.Result
+
   defstruct [:client, chardata: [], lines: [], status: :pending]
 
   @line_sep "\r\n"
 
   @type t :: %__MODULE__{
           chardata: IO.chardata(),
-          client: GenServer.from(),
+          client: nil | GenServer.from(),
           lines: [String.t()],
           status: :pending | :ok | {:error, String.t()}
         }
@@ -40,5 +42,10 @@ defmodule FLHook.Client.Reply do
       end)
 
     %{reply | chardata: data, lines: lines, status: status}
+  end
+
+  @spec to_result(t) :: Result.t()
+  def to_result(%__MODULE__{status: :ok} = reply) do
+    %Result{lines: lines(reply)}
   end
 end

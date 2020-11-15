@@ -1,4 +1,4 @@
-defmodule FLHook.CoderError do
+defmodule FLHook.CodecError do
   @moduledoc """
   An error indicating that decoding or encoding did not work.
   """
@@ -7,7 +7,7 @@ defmodule FLHook.CoderError do
 
   @type t :: %__MODULE__{
           direction: :decode | :encode,
-          mode: FLHook.Coder.mode(),
+          mode: FLHook.Codec.mode(),
           value: binary,
           reason: any
         }

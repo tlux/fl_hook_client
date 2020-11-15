@@ -1,10 +1,10 @@
 defmodule FLHook.CommandError do
-  defexception [:reason]
+  defexception [:detail]
 
-  @type t :: %__MODULE__{reason: String.t()}
+  @type t :: %__MODULE__{detail: String.t()}
 
   @impl true
   def message(error) do
-    "Command error: #{error.reason}"
+    "Command error: #{error.detail}"
   end
 end
