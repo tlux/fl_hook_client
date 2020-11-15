@@ -23,21 +23,21 @@ defmodule FLHook.Client do
     Connection.start_link(__MODULE__, init_opts, opts)
   end
 
-  @spec stop(pid, term) :: :ok
-  def stop(pid, reason \\ :normal) do
-    GenServer.stop(pid, reason)
+  @spec stop(GenServer.server(), term) :: :ok
+  def stop(server, reason \\ :normal) do
+    GenServer.stop(server, reason)
   end
 
   @spec cmd(GenServer.server(), String.t()) ::
           {:ok, Result.t()}
           | {:error, CodecError.t() | CommandError.t() | SocketError.t()}
-  def cmd(pid, cmd) do
-    Connection.call(pid, {:cmd, cmd})
+  def cmd(server, cmd) do
+    Connection.call(server, {:cmd, cmd})
   end
 
   @spec cmd!(GenServer.server(), String.t()) :: Result.t() | no_return
-  def cmd!(pid, cmd) do
-    case cmd(pid, cmd) do
+  def cmd!(server, cmd) do
+    case cmd(server, cmd) do
       {:ok, result} -> result
       {:error, error} -> raise error
     end
