@@ -1,0 +1,360 @@
+- CASH -
+all cash functions work no matter if the player is currently logged in or not
+getcash <charname>
+  shows current account balance of <charname>
+setcash <charname> <amount>
+  sets current account balance of <charname> to <amount>
+setcashsec <charname> <oldmoney> <amount>
+  sets current account balance of <charname> to <amount>, only works when his old account balance is <oldmoney>
+addcash <charname> <amount>
+  adds <amount> to the current account balance of <charname>
+addcashsec <charname> <oldmoney> <amount>
+  adds <amount> to the current account balance of <charname>, only works when his old account balance is <oldmoney>
+
+- KICK/BAN -
+kick <charname> <reason>
+  disconnects <charname>. the user will be displayed <reason>, if it is specified.
+ban <charname>
+  bans <charname>'s account
+  <charname> stays connected if he's currently on the server
+unban <charname>
+  unbans <charname>'s account
+kickban <charname> <reason>
+  kicks and bans <charname> (2 in 1, same as kick <charname> <reason>, ban <charname>)
+
+- MSG -
+msg <charname> <text>
+  private message <text> to <charname> (shown as "Console: <text>")
+msgs <systemname> <text>
+  send <text> to all players in <systemname> (shown as "Console: <text>")
+  <systemname> must be the either the system-id or the shortname (like Li01)
+msgu <text>
+  message <text> to the whole universe (shown as "Console: <text>")
+fmsg <charname> <xmltext>
+  private message <xmltext> to <charname> (see XMLTEXT section for further details)
+fmsgs <systemname> <xmltext>
+  send <xmltext> to all players in <systemname> (see XMLTEXT section for further details)
+fmsgu <xmltext>
+  message <xmltext> to the whole universe (see XMLTEXT section for further details)
+
+- BEAM/KILL -
+beam <charname> <basename>
+  force <charname> to land on <basename> (player must be in space)
+  <basename> must be either the shortname(like Li01_01_Base for manhatten) or a shortcut defined in the FLHook.ini
+kill <charname>
+  kills <charname>
+
+- REPUTATION -
+resetrep <charname>
+  sets <charname>'s reputations to the one specified in "mpnewcharacter.fl"
+setrep <charname> <repgroup> <value>
+  set <charname>'s reputation for <repgroup> to <value>. <value> should be between -1 and 1.
+  example:
+  "setrep playerxy li_n_grp 0.7"
+  -> set playerxy's reputation for liberty navy to 0.7
+setrep <charname> <repgroup>
+  return the feelings of <repgroup> towards <charname>
+
+- CARGO -
+cargo commands only work when the targeted player is ingame
+enumcargo <charname>
+  lists <charname>'s cargo, first reply will be the remaining hold size
+addcargo <charname> <good> <count> <mission>
+  adds <count> numbers of <good>(shortname like co_gun01_mark02,commodity_silver,etc OR hash) to <charname>'s cargo
+  if <mission> is set to 1, the cargo is declared as mission cargo
+  note: see issues
+removecargo <charname> <id> <count>
+  removes <count> numbers of <id>(this must be the value from enumcargo's "id=" reply) from <charname>
+
+- CHARACTERS -
+rename <oldcharname> <newcharname>
+  rename <oldcharname> to <newcharname> (player will be kicked if he's logged in <oldcharname>'s account)
+deletechar <charname>
+  delete <charname> (player will be kicked if he's logged in <oldcharname>'s account)
+readcharfile <charname>
+  reads <charname>'s userfile(xxx.fl) and prints it(each line will be preceded by "l ")
+writecharfile <charname> <data>
+  writes <data> into <charname>'s userfile(xxx.fl). existing charfile will be overwritten. you should
+  be careful with this one because a corrupted charfile may lead to server crashes and flhook does 
+  not do any syntax checks on <data>.
+  NOTE: YOU MUST REPLACE LINE-WRAPS WITH \n(TEXT)
+  example:
+  writecharfile playerxy [Player]\ndescription = 00300034002f0031003\n\n ... etc.
+
+- SETTINGS -
+setadmin <charname> <rights>
+  set <charname> as ingame-admin with <rights> (affects all characters on the account) (see RIGHTS section below)
+getadmin <charname>
+  show <charname>'s rights
+deladmin <charname>
+  revoke <charname>'s ingame-admin-status
+getreservedslot <charname>
+  show if <charname> has a reserved slot
+setreservedslot <charname> <value>
+  set reserved slot on <charname> (1=on, 0=off)
+rehash
+  reload the flhook.ini in order to activate changed settings, this works for everything except the socket-settings
+  
+- PLUGINS -
+loadplugins
+	loads all plugins in the plugin folder, reloads any unloaded plugins
+loadplugin <plugin filename>
+	loads a certain plugin
+listplugins
+	lists all loaded plugins
+unloadplugin <plugin shortname>
+	unloads a certain plugin (if allowed)
+pauseplugin <plugin shortname>
+	pauses a certain plugin (if allowed)
+unpauseplugin <plugin shortname>
+	continues a paused plugin
+
+- OTHER -
+getgroupmembers <charname>
+  returns all players which are in a group with <charname>
+getbasestatus <basename>
+  returns the hull status of a base. when the base hasn't been created in space yet it returns 0.
+getclientid <charname>
+  gets <charname>'s client id
+getplayerinfo <charname>
+  get <charname>'s info
+xgetplayerinfo <charname>
+  same as getplayerinfo, except that result is shown in a more readable format
+getplayers
+  get player info for all players on the server (players in charselect menu will not be shown)
+xgetplayers
+  same as getplayers, except that result is shown in a more readable format
+getplayerids
+  shows all players on the server with their client-id in a short format(useful when ingame)
+getaccountdirname <charname>
+  get account-dirname of <charname>
+getcharfilename <charname>
+  get char-filename of <charname>
+savechar <charname>
+  save <charname>'s current info to disk
+isloggedin <charname>
+  check if <charname> is logged in on the server
+isonserver <charname>
+  check if <charname> is connected(this includes idleness in charselect menu) to the server
+  NOTE: isonserver will also return true, when another char on the same account is logged in!
+serverinfo
+  shows server load, whether npc spawn is currently enabled or disabled(see ini) and uptime.
+  the format for the uptime is: days:hours:minutes:seconds
+moneyfixlist
+  show players with active money-fix
+help
+  get a list of all commands
+  
+- MISC INFOS -
+you can use client-ids instead of <charname> by appending $ to the cmd.
+examples: 
+getcash$ 12
+kickban$ 1
+etc.
+
+you can also use "shortcuts" instead of the whole character-name for a currently logged in player by appending
+& to the cmd. FLHook traverses all logged in players and checks if their character-name contains
+<charname>(case insensitive) and if so, the command will operate on this player. an error will be shown if the 
+searchstring given in <charname> is ambiguous.
+examples (let's assume there are 2 players logged in: "superhax0r" and "..::[]SUPERNERD[]::.."):
+"kick& nerd" kicks "..::[]SUPERNERD[]::.." because his nick contains "nerd"
+"getcash& super" fails because there are multiple character names containing "super"
+
+all commands return "OK" when successful or "ERR <errortext>" when error occured
+
+================================================================================
+== RIGHTS ======================================================================
+================================================================================
+rights may be seperated by a comma (e.g. setadmin playerxy cash,kickban,msg)
+superadmin        -> everything
+cash              -> cash commands
+kickban           -> kick/ban commands
+beamkill          -> beam/kill/resetrep/setrep command
+msg               -> msg commands
+cargo             -> cargo commands
+characters        -> character editing/reading commands
+reputation		  -> reputation commands
+eventmode         -> eventmode (only when connected via socket)
+settings		  -> rehash and reserved slots (setadmin only with superadmin rights)
+plugins			  -> plugin commands
+other	          -> all other commands
+special1		  -> special commands #1
+special2		  -> special commands #2
+special3		  -> special commands #3
+all other commands except setadmin/getadmin/deladmin may be executed by all admins
+
+================================================================================
+== XMLTEXT =====================================================================
+================================================================================
+
+the fmsg* commands allow you to format text in several ways(like in the exe\misctext.dll)
+text is enclosed in <TEXT></TEXT> tags while the format can be changed with <TRA .../>
+nodes-names must be written in capital chars! 
+be sure to replace the following characters within a text-node:
+< -> &#60; 
+> -> &#62;
+& -> &#38;
+
+- <TRA .../> NODE SYNTAX -
+the data field of a TRA node consists of an RGB value along with format specifications:
+<TRA data="0xBBGGRRFF" mask="-1"/>
+BB is the blue value
+GG is the green value
+RR is the red value
+FF is the format value
+(all in hexadecimal representation)
+
+format flags are:
+bin      hex  dec  effect
+00000001 1    1    bold
+00000010 2    2    italic
+00000100 4    4    underline
+00001000 8    8    big
+00010000 10   16   big&wide
+00100000 20   32   very big
+01000000 40   64   smoothest?
+10000000 80   128  smoother?
+10010000 90   144  small
+simply add the flags to combine them (e.g. 7 = bold/italic/underline)
+
+examples:
+fmsgu <TRA data="0x1919BD01" mask="-1"/><TEXT>A player has died: Player</TEXT>
+this is similar to the standard die-msg(which is shown in bold)
+fmsgu <TRA data="0xFF000003" mask="-1"/><TEXT>Hello</TEXT><TRA data="0x00FF0008" mask="-1"/> <TEXT>World</TEXT>
+this will show "Hello World" ("Hello" will be blue/bold/italic and "World" green/big)
+
+================================================================================
+== EVENTMODE ===================================================================
+================================================================================
+socket connections may be set to eventmode by entering "eventmode". from then on 
+you will receive several event-notifications listed below. once activated, 
+eventmode runs until you close the connection.
+
+- NOTIFICATIONS -
+chat from=<player> id=<client-id> type=<type> [to=<recipient> idto=<recipient-client-id>] text=<text>
+  <player>: charname sending the message
+  <client-id>: client-id of sender
+  <type>: either universe,system or player
+  <recipient>/<recipient-client-id>: only sent when type=player
+  <text>: guess ...
+
+kill victim=<player> type=<type> [by=<killer>]
+  <player>: charname of the victim
+  <type>: selfkill,player,npc,suicide
+  <killer>: charname of the killer
+
+login char=<player> accountdirname=<dirname> id=<client-id> ip=<ip>
+  occurs when player selects a character in the character-select menu
+
+launch char=<player> id=<client-id> base=<basename> system=<systemname>
+  occurs when player undocks from a base/planet
+
+baseenter char=<player> id=<client-id> base=<basename> system=<systemname>
+  occurs when player enters base
+  
+baseexit char=<player> id=<client-id> base=<basename> system=<systemname>
+  occurs when player exits base(includes disconnect/f1)
+
+jumpin char=<player> id=<client-id> system=<systemname>
+  occurs when player jumps in a system
+  
+switchout char=<player> id=<client-id> system=<systemname>
+  occurs when player switches out a system
+
+spawn char=<player> id=<client-id> system=<systemname>
+  occurs when player selects a character and launches in space
+
+connect id=<client-id> ip=<ip>
+  occurs when player connects to the server
+
+disconnect char=<player> id=<client-id>
+  occurs when player disonnects from the server
+
+================================================================================
+== USER-COMMANDS ===============================================================
+================================================================================
+user commands may be entered ingame by every player in chat and can be enabled
+or disabled in the ini. enter them ingame to get a description.
+
+/set diemsg xxx
+  while xxx must be one of the following values:
+  - all = all deaths will be displayed
+  - system = only display deaths occuring in the system you are currently in
+  - self = only display deaths the player is involved in(either as victim or killer)
+  - none = don't show any death-messages
+  settings keep saved in flhookuser.ini and affect all characters on the account
+
+/set diemsgsize <small/default>
+  - change the size of the diemsgs
+
+/set chatfont <size> <style>
+  <size>: small, default or big
+  <style>: default, bold, italic or underline
+  this let's every user adjust the appearance of the chat-messages
+
+/autobuy <...>
+  let ammo be bought automatically whenever you enter a base. enter the command
+  ingame to get a description
+
+/ignore <charname> [<flags>]
+  ignore chat from certain players
+
+/ignoreid <client-id> [<flags>]
+  ignore by client-id
+  
+/delignore <id> [<id2> <id3> ...]
+  delete ignore entry
+  
+/ignorelist
+  display ignore list
+  
+/ids
+  show client-ids of all players
+
+/id
+  show own client-id
+  
+/i$ <client-id> and /invite$ <client-id>
+  invite player to group by client-id
+  
+/credits
+  show the authors of FLHook and all running plugins
+
+/help
+  show all available user commands
+
+================================================================================
+== LOGGING =====================================================================
+================================================================================
+flhook logfiles are created in "Freelancer/EXE/flhook_logs/".
+
+flhook.log
+  debug
+flhook_kicks.log:
+  idle-/ping-/loss-/corruptedcharfile-/ipban-/hostban-kicks
+flhook_cheaters.log:
+  detected cheating
+flhook_connects.log:
+  every login if activated in FLHook.ini
+flhook_usercmds.log:
+  every user command if activated in FLHook.ini
+flhook_admincmds.log:
+  every admin command if activated in FLHook.ini
+ flhook_socketcmds.log:
+  every socket-admin command if activated in FLHook.ini
+flhook_perftimers.log:
+  performance timer reports if activated in FLHook.ini
+  
+with a debug=yes setting in FLHook.ini, timestamped debug logfiles will be created
+in "flhook_logs/debug/"
+
+================================================================================
+== BLOWFISH ENCRYPTION PROGRAMMING =============================================
+================================================================================
+Because Blowfish only supports encrypting 8 bytes of data at once, it is
+necessary to pad data (with 0x00s) that is not a multiple of 8 bytes.  When
+recieving encrypted data from FLHook, you should check for null characters and
+remove them from the decrypted string.  When sending encrypted data to FLHook,
+you should pad the string with null characters if necessary.  If the blowfish
+implementation you are using specifically encrypts and decrypts strings, this
+may already be handled by it.
