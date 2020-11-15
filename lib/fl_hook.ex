@@ -4,6 +4,7 @@ defmodule FLHook do
   """
 
   alias FLHook.Client
+  alias FLHook.Utils
 
   def help(pid) do
     pid
@@ -17,7 +18,7 @@ defmodule FLHook do
       {:ok,
        result.lines
        |> Stream.map(fn "l " <> line -> line end)
-       |> Enum.join("\r\n")}
+       |> Enum.join(Utils.line_sep())}
     end
   end
 end

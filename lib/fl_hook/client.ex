@@ -10,6 +10,7 @@ defmodule FLHook.Client do
   alias FLHook.HandshakeError
   alias FLHook.Result
   alias FLHook.SocketError
+  alias FLHook.Utils
 
   @connect_timeout 5000
   @passive_recv_timeout 5000
@@ -211,8 +212,8 @@ defmodule FLHook.Client do
     end
   end
 
-  defp read_cmd_reply(socket, mode) do
-    case do_read_cmd_reply(%Reply{}, socket, mode) do
+  defp read_cmd_result(socket, mode) do
+    case do_read_cmd_result(%Reply{}, socket, mode) do
       %Reply{status: :ok} = reply ->
         {:ok, Reply.to_result(reply)}
 
@@ -221,15 +222,15 @@ defmodule FLHook.Client do
     end
   end
 
-  defp do_read_cmd_reply(%Reply{status: :pending} = reply, socket, mode) do
+  defp do_read_cmd_result(%Reply{status: :pending} = reply, socket, mode) do
     with {:ok, chunk} <- read_chunk(socket, mode) do
       reply
       |> Reply.add_chunk(chunk)
-      |> do_read_cmd_reply(socket, mode)
+      |> do_read_cmd_result(socket, mode)
     end
   end
 
-  defp do_read_cmd_reply(%Reply{} = reply, _socket, _mode), do: reply
+  defp do_read_cmd_result(%Reply{} = reply, _socket, _mode), do: reply
 
   defp send_msg(socket, mode, value) do
     with {:codec, {:ok, encoded}} <-
@@ -243,13 +244,13 @@ defmodule FLHook.Client do
   end
 
   defp send_cmd(socket, mode, cmd) do
-    send_msg(socket, mode, cmd <> "\r\n")
+    send_msg(socket, mode, cmd <> Utils.line_sep())
   end
 
   defp cmd_passive(socket, mode, cmd) do
     with :ok <- send_cmd(socket, mode, cmd),
-         {:ok, lines} <- read_cmd_reply(socket, mode) do
-      {:ok, %Result{lines: lines}}
+         {:ok, result} <- read_cmd_result(socket, mode) do
+      {:ok, result}
     end
   end
 
