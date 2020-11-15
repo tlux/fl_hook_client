@@ -135,8 +135,10 @@ defmodule FLHook.Client do
   end
 
   @impl true
-  def handle_call({:cmd, cmd}, _from, %{event_mode: true} = state) do
-    {:reply, {:error, %CommandError{reason: "Unable to run commands in event mode"}}, state}
+  def handle_call({:cmd, _cmd}, _from, %{event_mode: true} = state) do
+    {:reply,
+     {:error, %CommandError{reason: "Unable to run commands in event mode"}},
+     state}
   end
 
   def handle_call({:cmd, cmd}, from, state) do
