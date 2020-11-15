@@ -3,16 +3,12 @@ defmodule FLHook do
   Documentation for `FLHook`.
   """
 
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> FLHook.hello()
-      :world
-
-  """
-  def hello do
-    :world
+  def readcharfile(pid, name) do
+    with {:ok, charfile} <- FLHook.Client.cmd(pid, "readcharfile #{name}") do
+      {:ok,
+       charfile
+       |> Stream.map(fn "l " <> line -> line end)
+       |> Enum.join("\r\n")}
+    end
   end
 end

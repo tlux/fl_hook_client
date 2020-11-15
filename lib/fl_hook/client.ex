@@ -3,6 +3,7 @@ defmodule FLHook.Client do
 
   require Logger
 
+  alias FLHook.Client.Reply
   alias FLHook.Coder
 
   def start_link(opts \\ []) do
@@ -34,7 +35,7 @@ defmodule FLHook.Client do
     event_mode = opts[:event_mode] || false
 
     if password do
-      {:connect, :init,
+      {:connect, nil,
        %{
          host: host,
          port: port,
@@ -59,8 +60,10 @@ defmodule FLHook.Client do
               [:binary, active: false, send_timeout: @send_timeout],
               @connect_timeout
             )},
+         # Welcome message is used to verify it is a FLHook socket
          {:welcome, {:ok, @welcome_msg <> _}} <-
            {:welcome, read_msg(socket, state.socket_mode)},
+         # TODO: Remove auth to handle_info
          {:auth, :ok} <-
            {:auth,
             send_msg(
@@ -132,25 +135,37 @@ defmodule FLHook.Client do
 
   @impl true
   def handle_call({:cmd, cmd}, from, state) do
-    queue = :queue.in(state.queue, %{from: from})
     send_msg(state.socket, state.socket_mode, "#{cmd}\r\n")
+    queue = :queue.in(%Reply{client: from}, state.queue)
     {:noreply, %{state | queue: queue}}
   end
 
   @impl true
-  def handle_info({:tcp, socket, data}, state) do
-    queue =
-      case :queue.out(state.queue) do
-        {{:value, %{from: from}}, queue} ->
-          GenServer.reply(from, {:ok, data})
-          queue
-
-        {:empty, queue} ->
-          queue
-      end
-
+  def handle_info({:tcp, socket, msg}, state) do
     :inet.setopts(socket, active: :once)
-    {:noreply, %{state | queue: queue}}
+
+    case Coder.decode(state.socket_mode, msg) do
+      {:ok, msg} ->
+        {{:value, reply}, new_queue} = :queue.out(state.queue)
+
+        case Reply.add_chunk(reply, msg) do
+          %{status: :pending} = reply ->
+            {:noreply, %{state | queue: :queue.in_r(reply, new_queue)}}
+
+          %{status: :ok} = reply ->
+            GenServer.reply(reply.client, {:ok, Reply.lines(reply)})
+            {:noreply, %{state | queue: new_queue}}
+
+          %{status: error} ->
+            GenServer.reply(reply.client, error)
+            {:noreply, %{state | queue: new_queue}}
+        end
+
+      {:error, error} ->
+        # TODO
+        Logger.error("decode error: #{Exception.message(error)}")
+        {:stop, :decode_error, state}
+    end
   end
 
   def handle_info({:tcp_closed, socket}, state) do
