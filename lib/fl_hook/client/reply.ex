@@ -6,8 +6,8 @@ defmodule FLHook.Client.Reply do
   @line_sep "\r\n"
 
   @type t :: %__MODULE__{
-          client: GenServer.from(),
           chardata: IO.chardata(),
+          client: GenServer.from(),
           lines: [String.t()],
           status: :pending | :ok | {:error, String.t()}
         }

@@ -166,8 +166,11 @@ defmodule FLHook.Client do
             {:noreply, %{state | queue: :queue.in_r(reply, new_queue)}}
 
           %{status: :ok} = reply ->
-            lines = Reply.lines(reply)
-            GenServer.reply(reply.client, {:ok, %Result{lines: lines}})
+            GenServer.reply(
+              reply.client,
+              {:ok, %Result{lines: Reply.lines(reply)}}
+            )
+
             {:noreply, %{state | queue: new_queue}}
 
           %{status: {:error, reason}} ->
