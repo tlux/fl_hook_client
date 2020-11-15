@@ -5,18 +5,32 @@ defmodule FLHook.Client do
 
   alias FLHook.Client.Reply
   alias FLHook.Coder
+  alias FLHook.CommandError
+  alias FLHook.Result
 
+  @spec start_link(Keyword.t()) :: GenServer.on_start()
   def start_link(opts \\ []) do
     {opts, init_opts} = Keyword.split(opts, [:name])
     Connection.start_link(__MODULE__, init_opts, opts)
   end
 
+  @spec stop(pid, term) :: :ok
   def stop(pid, reason \\ :normal) do
     GenServer.stop(pid, reason)
   end
 
+  @spec cmd(GenServer.server(), String.t()) ::
+          {:ok, Result.t()} | {:error, CommandError.t()}
   def cmd(pid, cmd) do
     Connection.call(pid, {:cmd, cmd})
+  end
+
+  @spec cmd!(GenServer.server(), String.t()) :: Result.t() | no_return
+  def cmd!(pid, cmd) do
+    case cmd(pid, cmd) do
+      {:ok, result} -> result
+      {:error, error} -> raise error
+    end
   end
 
   # Server
@@ -93,14 +107,11 @@ defmodule FLHook.Client do
   defp read_msg(socket, mode) do
     with {:ok, value} <- :gen_tcp.recv(socket, 0, @recv_timeout),
          {:ok, decoded} <- Coder.decode(mode, value) do
-      Logger.debug("[RECV] #{String.trim_trailing(decoded)}")
       {:ok, decoded}
     end
   end
 
   defp send_msg(socket, mode, value) do
-    Logger.debug("[SEND] #{String.trim_trailing(value)}")
-
     with {:ok, encoded} <- Coder.encode(mode, value),
          :ok <- :gen_tcp.send(socket, encoded) do
       :ok
@@ -153,11 +164,16 @@ defmodule FLHook.Client do
             {:noreply, %{state | queue: :queue.in_r(reply, new_queue)}}
 
           %{status: :ok} = reply ->
-            GenServer.reply(reply.client, {:ok, Reply.lines(reply)})
+            lines = Reply.lines(reply)
+            GenServer.reply(reply.client, {:ok, %Result{lines: lines}})
             {:noreply, %{state | queue: new_queue}}
 
-          %{status: error} ->
-            GenServer.reply(reply.client, error)
+          %{status: {:error, reason}} ->
+            GenServer.reply(
+              reply.client,
+              {:error, %CommandError{reason: reason}}
+            )
+
             {:noreply, %{state | queue: new_queue}}
         end
 
@@ -168,13 +184,13 @@ defmodule FLHook.Client do
     end
   end
 
-  def handle_info({:tcp_closed, socket}, state) do
-    # TODO: ...
-    {:noreply, state}
+  def handle_info({:tcp_closed, _socket}, state) do
+    # TODO: Log
+    {:backoff, 1000, %{state | socket: nil}}
   end
 
-  def handle_info({:tcp_error, socket, reason}, state) do
-    # TODO: ...
-    {:noreply, state}
+  def handle_info({:tcp_error, _socket, _reason}, state) do
+    # TODO: Log
+    {:backoff, 1000, %{state | socket: nil}}
   end
 end

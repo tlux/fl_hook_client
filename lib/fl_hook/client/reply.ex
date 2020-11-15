@@ -9,7 +9,7 @@ defmodule FLHook.Client.Reply do
           client: GenServer.from(),
           chardata: IO.chardata(),
           lines: [String.t()],
-          status: :pending | :ok | {:error, binary}
+          status: :pending | :ok | {:error, String.t()}
         }
 
   @spec lines(t) :: [binary]
