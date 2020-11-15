@@ -12,6 +12,7 @@ defmodule FLHook.Client do
   alias FLHook.SocketError
   alias FLHook.Utils
 
+  @backoff_timeout 1000
   @connect_timeout 5000
   @passive_recv_timeout 5000
   @send_timeout 5000
@@ -43,6 +44,16 @@ defmodule FLHook.Client do
     end
   end
 
+  @spec subscribe(GenServer.server(), GenServer.server()) :: :ok
+  def subscribe(server, subscriber \\ self()) do
+    Connection.call(server, {:subscribe, subscriber})
+  end
+
+  @spec unsubscribe(GenServer.server(), GenServer.server()) :: :ok
+  def unsubscribe(server, subscriber \\ self()) do
+    Connection.call(server, {:unsubscribe, subscriber})
+  end
+
   # Callbacks
 
   @impl true
@@ -53,16 +64,26 @@ defmodule FLHook.Client do
     socket_mode = opts[:socket_mode] || :unicode
     event_mode = opts[:event_mode] || false
 
+    subscriptions =
+      if event_mode do
+        Map.new(opts[:subscribers] || [], fn subscriber ->
+          {subscriber, Process.monitor(subscriber)}
+        end)
+      else
+        %{}
+      end
+
     if password do
       {:connect, nil,
        %{
-         host: host,
-         port: port,
-         password: password,
-         socket_mode: socket_mode,
          event_mode: event_mode,
+         host: host,
+         password: password,
+         port: port,
+         queue: :queue.new(),
+         socket_mode: socket_mode,
          socket: nil,
-         queue: :queue.new()
+         subscriptions: subscriptions
        }}
     else
       {:stop, :password_missing}
@@ -90,7 +111,7 @@ defmodule FLHook.Client do
 
       {_scope, {:error, error}} ->
         log_error(error, state)
-        {:backoff, 1000, state}
+        {:backoff, @backoff_timeout, state}
     end
   end
 
@@ -111,7 +132,7 @@ defmodule FLHook.Client do
   end
 
   @impl true
-  def handle_call(_payload, _from, %{socket: nil} = state) do
+  def handle_call({:cmd, _cmd}, _from, %{socket: nil} = state) do
     {:reply, {:error, %SocketError{reason: :closed}}, state}
   end
 
@@ -132,12 +153,45 @@ defmodule FLHook.Client do
     end
   end
 
+  def handle_call({action, _subscriber}, _from, %{event_mode: false} = state)
+      when action in [:subscribe, :unsubscribe] do
+    {:reply, {:error, "TODO No subscription outside of event mode"}, state}
+  end
+
+  def handle_call({:subscribe, subscriber}, _from, state) do
+    subscriptions =
+      Map.put_new_lazy(state.subscriptions, subscriber, fn ->
+        Process.monitor(subscriber)
+      end)
+
+    {:reply, :ok, %{state | subscriptions: subscriptions}}
+  end
+
+  def handle_call({:unsubscribe, subscriber}, _from, state) do
+    subscriptions =
+      case Map.pop(state.subscriptions, subscriber) do
+        {nil, subscriptions} ->
+          subscriptions
+
+        {monitor_ref, subscriptions} ->
+          Process.demonitor(monitor_ref, [:flush])
+          subscriptions
+      end
+
+    {:reply, :ok, %{state | subscriptions: subscriptions}}
+  end
+
   @impl true
   def handle_info({:tcp, socket, msg}, %{event_mode: true} = state) do
     :inet.setopts(socket, active: :once)
 
-    # TODO: Notify subscribers
     Logger.debug("[EVENT] #{msg}")
+
+    # TODO: Introduce event struct
+    Enum.each(state.subscriptions, fn subscription ->
+      send(subscription.subscriber, {:event, msg})
+    end)
+
     {:noreply, state}
   end
 
@@ -185,6 +239,16 @@ defmodule FLHook.Client do
     error = %SocketError{reason: reason}
     log_error(error, state)
     {:disconnect, error, state}
+  end
+
+  def handle_info({:DOWN, monitor_ref, :process, subscriber, _info}, state) do
+    subscriptions =
+      case Map.pop(state.subscriptions, subscriber) do
+        {^monitor_ref, subscriptions} -> subscriptions
+        {_, subscriptions} -> subscriptions
+      end
+
+    {:noreply, %{state | subscriptions: subscriptions}}
   end
 
   # Helpers
