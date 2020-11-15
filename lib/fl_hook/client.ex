@@ -120,19 +120,21 @@ defmodule FLHook.Client do
 
   @impl true
   def disconnect(info, state) do
-    :ok = :gen_tcp.close(state.socket)
-
-    case info do
-      {:close, from} ->
-        Connection.reply(from, :ok)
-
-      {:error, :closed} ->
-        :error_logger.format("Connection closed~n", [])
-
-      {:error, reason} ->
-        reason = :inet.format_error(reason)
-        :error_logger.format("Connection error: ~s~n", [reason])
+    if state.socket do
+      :ok = :gen_tcp.close(state.socket)
     end
+
+    # case info do
+    #   {:close, from} ->
+    #     Connection.reply(from, :ok)
+
+    #   {:error, :closed} ->
+    #     :error_logger.format("Connection closed~n", [])
+
+    #   {:error, reason} ->
+    #     reason = :inet.format_error(reason)
+    #     :error_logger.format("Connection error: ~s~n", [reason])
+    # end
 
     {:connect, :reconnect, %{state | socket: nil}}
   end
@@ -186,11 +188,11 @@ defmodule FLHook.Client do
 
   def handle_info({:tcp_closed, _socket}, state) do
     # TODO: Log
-    {:backoff, 1000, %{state | socket: nil}}
+    {:disconnect, :close, %{state | socket: nil}}
   end
 
-  def handle_info({:tcp_error, _socket, _reason}, state) do
+  def handle_info({:tcp_error, _socket, reason}, state) do
     # TODO: Log
-    {:backoff, 1000, %{state | socket: nil}}
+    {:disconnect, reason, %{state | socket: nil}}
   end
 end
