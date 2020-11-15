@@ -65,7 +65,7 @@ defmodule FLHook.Client do
   end
 
   @impl true
-  def connect(_, state) do
+  def connect(_info, state) do
     with {:connect, {:ok, socket}} <-
            {:connect,
             :gen_tcp.connect(
@@ -119,7 +119,7 @@ defmodule FLHook.Client do
   end
 
   @impl true
-  def disconnect(info, state) do
+  def disconnect(_info, state) do
     if state.socket do
       :ok = :gen_tcp.close(state.socket)
     end
@@ -135,6 +135,10 @@ defmodule FLHook.Client do
   end
 
   @impl true
+  def handle_call({:cmd, cmd}, _from, %{event_mode: true} = state) do
+    {:reply, {:error, %CommandError{reason: "Unable to run commands in event mode"}}, state}
+  end
+
   def handle_call({:cmd, cmd}, from, state) do
     send_msg(state.socket, state.socket_mode, "#{cmd}\r\n")
     queue = :queue.in(%Reply{client: from}, state.queue)
@@ -142,6 +146,12 @@ defmodule FLHook.Client do
   end
 
   @impl true
+  def handle_info({:tcp, _socket, msg}, %{event_mode: true} = state) do
+    # TODO: Notify subscribers
+    Logger.debug("[EVENT] #{msg}")
+    {:noreply, state}
+  end
+
   def handle_info({:tcp, socket, msg}, state) do
     :inet.setopts(socket, active: :once)
 
