@@ -185,14 +185,21 @@ defmodule FLHook.Client do
   def handle_info({:tcp, socket, msg}, %{event_mode: true} = state) do
     :inet.setopts(socket, active: :once)
 
-    Logger.debug("[EVENT] #{msg}")
+    case Codec.decode(state.socket_mode, msg) do
+      {:ok, msg} ->
+        Logger.debug("[EVENT] #{msg}")
 
-    # TODO: Introduce event struct
-    Enum.each(state.subscriptions, fn subscription ->
-      send(subscription.subscriber, {:event, msg})
-    end)
+        # TODO: Introduce event struct
+        Enum.each(state.subscriptions, fn subscription ->
+          send(subscription.subscriber, {:event, msg})
+        end)
 
-    {:noreply, state}
+        {:noreply, state}
+
+      {:error, error} ->
+        Logger.error("FLHook client received an unexpected message")
+        {:stop, error, state}
+    end
   end
 
   def handle_info({:tcp, socket, msg}, state) do
