@@ -8,6 +8,7 @@ defmodule FLHook.Client do
   alias FLHook.CodecError
   alias FLHook.CommandError
   alias FLHook.HandshakeError
+  alias FLHook.InvalidOperationError
   alias FLHook.Result
   alias FLHook.SocketError
   alias FLHook.Utils
@@ -31,7 +32,11 @@ defmodule FLHook.Client do
 
   @spec cmd(GenServer.server(), String.t()) ::
           {:ok, Result.t()}
-          | {:error, CodecError.t() | CommandError.t() | SocketError.t()}
+          | {:error,
+             CodecError.t()
+             | CommandError.t()
+             | InvalidOperationError.t()
+             | SocketError.t()}
   def cmd(server, cmd) do
     Connection.call(server, {:cmd, cmd})
   end
@@ -105,7 +110,8 @@ defmodule FLHook.Client do
       :inet.setopts(socket, active: :once)
       {:ok, %{state | socket: socket}}
     else
-      {_scope, {:error, %CommandError{} = error}} ->
+      {_scope, {:error, %error_struct{} = error}}
+      when error_struct in [CommandError, HandshakeError] ->
         log_error(error, state)
         {:stop, error, state}
 
@@ -138,7 +144,8 @@ defmodule FLHook.Client do
 
   def handle_call({:cmd, _cmd}, _from, %{event_mode: true} = state) do
     {:reply,
-     {:error, %CommandError{detail: "Unable to run commands in event mode"}},
+     {:error,
+      %InvalidOperationError{message: "Unable to run commands in event mode"}},
      state}
   end
 
@@ -155,7 +162,11 @@ defmodule FLHook.Client do
 
   def handle_call({action, _subscriber}, _from, %{event_mode: false} = state)
       when action in [:subscribe, :unsubscribe] do
-    {:reply, {:error, "TODO No subscription outside of event mode"}, state}
+    {:reply,
+     {:error,
+      %InvalidOperationError{
+        message: "Unable manage subscriptions when not in event mode"
+      }}, state}
   end
 
   def handle_call({:subscribe, subscriber}, _from, state) do
