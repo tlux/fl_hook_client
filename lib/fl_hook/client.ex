@@ -49,12 +49,14 @@ defmodule FLHook.Client do
     end
   end
 
-  @spec subscribe(GenServer.server(), GenServer.server()) :: :ok
+  @spec subscribe(GenServer.server(), GenServer.server()) ::
+          :ok | {:error, InvalidOperationError.t()}
   def subscribe(server, subscriber \\ self()) do
     Connection.call(server, {:subscribe, subscriber})
   end
 
-  @spec unsubscribe(GenServer.server(), GenServer.server()) :: :ok
+  @spec unsubscribe(GenServer.server(), GenServer.server()) ::
+          :ok | {:error, InvalidOperationError.t()}
   def unsubscribe(server, subscriber \\ self()) do
     Connection.call(server, {:unsubscribe, subscriber})
   end
