@@ -205,7 +205,7 @@ defmodule FLHook.Client do
         {:noreply, state}
 
       {:error, error} ->
-        Logger.error("FLHook client received an unexpected message")
+        log_error(error, state)
         {:stop, error, state}
     end
   end
@@ -239,7 +239,7 @@ defmodule FLHook.Client do
         end
 
       {:error, error} ->
-        Logger.error("FLHook client received an unexpected message")
+        log_error(error, state)
         {:stop, error, state}
     end
   end
