@@ -93,7 +93,7 @@ defmodule FLHook.Client do
          subscriptions: subscriptions
        }}
     else
-      {:stop, :password_missing}
+      {:stop, %InvalidOperationError{message: "No password specified"}}
     end
   end
 
