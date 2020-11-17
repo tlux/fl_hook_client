@@ -97,25 +97,20 @@ defmodule FLHook.Client do
 
   @impl true
   def connect(_info, state) do
-    with {:connect, {:ok, socket}} <-
-           {:connect, socket_connect(state.host, state.port)},
-         {:welcome, :ok} <-
-           {:welcome, verify_welcome_msg(socket, state.socket_mode)},
-         {:auth, :ok} <-
-           {:auth, authenticate(socket, state.socket_mode, state.password)},
-         {:event_mode, :ok} <-
-           {:event_mode,
-            event_mode(socket, state.socket_mode, state.event_mode)} do
+    with {:ok, socket} <- socket_connect(state.host, state.port),
+         :ok <- verify_welcome_msg(socket, state.socket_mode),
+         :ok <- authenticate(socket, state.socket_mode, state.password),
+         :ok <- event_mode(socket, state.socket_mode, state.event_mode) do
       :ok = :gen_tcp.controlling_process(socket, self())
       :inet.setopts(socket, active: :once)
       {:ok, %{state | socket: socket}}
     else
-      {_scope, {:error, %error_struct{} = error}}
+      {:error, %error_struct{} = error}
       when error_struct in [CommandError, HandshakeError] ->
         log_error(error, state)
         {:stop, error, state}
 
-      {_scope, {:error, error}} ->
+      {:error, error} ->
         log_error(error, state)
         {:backoff, @backoff_timeout, state}
     end
