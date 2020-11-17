@@ -298,6 +298,9 @@ defmodule FLHook.Client do
 
       %Reply{status: {:error, detail}} ->
         {:error, %CommandError{detail: detail}}
+
+      error ->
+        error
     end
   end
 
