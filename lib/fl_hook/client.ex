@@ -7,6 +7,7 @@ defmodule FLHook.Client do
   alias FLHook.Codec
   alias FLHook.CodecError
   alias FLHook.CommandError
+  alias FLHook.Event
   alias FLHook.HandshakeError
   alias FLHook.InvalidOperationError
   alias FLHook.Result
@@ -195,11 +196,12 @@ defmodule FLHook.Client do
 
     case Codec.decode(state.socket_mode, msg) do
       {:ok, msg} ->
-        Logger.debug("[EVENT] #{msg}")
+        event = Event.parse(msg)
 
-        # TODO: Introduce event struct
+        Logger.debug("[EVENT] #{inspect(event)}")
+
         Enum.each(state.subscriptions, fn subscription ->
-          send(subscription.subscriber, {:event, msg})
+          send(subscription.subscriber, event)
         end)
 
         {:noreply, state}
