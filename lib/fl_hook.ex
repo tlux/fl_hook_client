@@ -6,15 +6,15 @@ defmodule FLHook do
   alias FLHook.Client
   alias FLHook.Utils
 
-  def help(pid) do
-    pid
+  def help(client) do
+    client
     |> Client.cmd!("help")
     |> to_string()
     |> IO.puts()
   end
 
-  def readcharfile(pid, name) do
-    with {:ok, result} <- Client.cmd(pid, "readcharfile #{name}") do
+  def readcharfile(client, name) do
+    with {:ok, result} <- Client.cmd(client, "readcharfile #{name}") do
       {:ok,
        result.lines
        |> Stream.map(fn "l " <> line -> line end)
