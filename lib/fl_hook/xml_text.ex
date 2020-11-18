@@ -35,7 +35,8 @@ defmodule FLHook.XMLText do
     %{xml_text | chardata: [xml_text.chardata, str]}
   end
 
-  defp color_to_value({red, green, blue}) do
+  defp color_to_value({red, green, blue}) 
+       when is_integer(red) and is_integer(green) and is_integer(blue) do
     [blue, green, red]
     |> Enum.map(&to_hex/1)
     |> Enum.join()
@@ -48,7 +49,7 @@ defmodule FLHook.XMLText do
   defp color_to_value(
         <<red::binary-size(2), green::binary-size(2), blue::binary-size(2)>>
       ) do
-    "#{blue}#{green}#{red}"
+    String.upcase("#{blue}#{green}#{red}")
   end
 
   defp color_to_value(
@@ -57,7 +58,11 @@ defmodule FLHook.XMLText do
     red = String.duplicate(red, 2)
     green = String.duplicate(green, 2)
     blue = String.duplicate(blue, 2)
-    color_to_value(red, green, blue)
+    String.upcase("#{blue}#{green}#{red}")
+  end
+
+  def color_to_value(value) do
+    raise ArgumentError, "Invalid color (#{value})"
   end
 
   defp flags_to_value(flags) do
@@ -81,6 +86,6 @@ defmodule FLHook.XMLText do
   end
 
   defimpl String.Chars do
-    defdelegate to_string(xml_test), to: FLHook.XMLText
+    defdelegate to_string(xml_text), to: FLHook.XMLText
   end
 end
