@@ -86,10 +86,10 @@ defmodule FLHook.XMLText do
   defp color_to_value(
         <<red::binary-size(1), green::binary-size(1), blue::binary-size(1)>>
       ) do
-    red = String.duplicate(red, 2)
-    green = String.duplicate(green, 2)
-    blue = String.duplicate(blue, 2)
-    color_to_value("#{red}#{green}#{blue}")
+    [red, green, blue]
+    |> Enum.map(&String.duplicate(&1, 2))
+    |> Enum.join()
+    |> color_to_value()
   end
 
   defp flags_to_value(flags) do
