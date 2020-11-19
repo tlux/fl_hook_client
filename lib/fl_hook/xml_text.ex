@@ -26,19 +26,29 @@ defmodule FLHook.XMLText do
   @type t :: %__MODULE__{chardata: IO.chardata()}
   @type flag :: atom
 
-  @spec add_node(t, String.t(), String.t(), [flag]) :: t
-  def add_node(%__MODULE__{} = xml_text, text, color, flags \\ []) do
-    text = Utils.map_chars(text, @char_map)
+  @spec format(t, String.t(), [flag]) :: t
+  def format(%__MODULE__{} = xml_text, color, flags \\ []) do
     color = color_to_value(color) 
     format = flags_to_value(flags)
-    str = ~s(<TRA data="0x#{color}#{format}" mask="-1"/><TEXT>#{text}</TEXT>)
+    add_node(xml_text, ~s(<TRA data="0x#{color}#{format}" mask="-1"/>))
+  end
+
+  @spec text(t, String.t()) :: t
+  def text(%__MODULE__{} = xml_text, text) do
+    text = Utils.map_chars(text, @char_map)
+    add_node(xml_text, ~s(<TEXT>#{text}</TEXT>))
+  end
+
+  defp add_node(xml_text, str) do
     %{xml_text | chardata: [xml_text.chardata, str]}
   end
 
-  defp color_to_value({red, green, blue}) 
-       when is_integer(red) and is_integer(green) and is_integer(blue) do
+  defp color_to_value({red, green, blue}) do
     [blue, green, red]
-    |> Enum.map(&to_hex/1)
+    |> Enum.map(fn
+      value when value in 0..255 -> to_hex(value)
+      _ -> raise ArgumentError, "invalid RGB color"
+    end)
     |> Enum.join()
   end
 
@@ -49,7 +59,13 @@ defmodule FLHook.XMLText do
   defp color_to_value(
         <<red::binary-size(2), green::binary-size(2), blue::binary-size(2)>>
       ) do
-    String.upcase("#{blue}#{green}#{red}")
+    with {red, _} <- Integer.parse(red, 16),
+         {green, _} <- Integer.parse(green, 16),
+         {blue, _} <- Integer.parse(blue, 16) do
+      color_to_value({red, green, blue})
+    else
+      _ -> raise ArgumentError, "invalid RGB color"     
+    end
   end
 
   defp color_to_value(
@@ -58,11 +74,7 @@ defmodule FLHook.XMLText do
     red = String.duplicate(red, 2)
     green = String.duplicate(green, 2)
     blue = String.duplicate(blue, 2)
-    String.upcase("#{blue}#{green}#{red}")
-  end
-
-  def color_to_value(value) do
-    raise ArgumentError, "Invalid color (#{value})"
+    color_to_value("#{red}#{green}#{blue}")
   end
 
   defp flags_to_value(flags) do
