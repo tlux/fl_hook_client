@@ -24,7 +24,17 @@ defmodule FLHook.XMLText do
   }
 
   @type t :: %__MODULE__{chardata: IO.chardata()}
-  @type flag :: atom
+  
+  @type flag :: 
+    :bold |
+    :italic |
+    :underline |
+    :big |
+    :big_wide |
+    :very_big |
+    :smoothest |
+    :smoother |
+    :small
 
   @spec format(t, String.t(), [flag]) :: t
   def format(%__MODULE__{} = xml_text, color, flags \\ []) do
