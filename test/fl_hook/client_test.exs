@@ -8,7 +8,7 @@ defmodule FLHook.ClientTest do
       Client.start_link(
         host: "workstation.fritz.box",
         port: 1920,
-        socket_mode: :unicode,
+        event_mode: :unicode,
         password: "admin"
       )
 

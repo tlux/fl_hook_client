@@ -5,7 +5,7 @@ defmodule FLHook.SocketError do
 
   @impl true
   def message(%{reason: :closed}) do
-    "Socket error: Connection closed"
+    "Socket error: connection closed"
   end
 
   def message(error) do
