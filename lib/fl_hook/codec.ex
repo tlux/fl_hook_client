@@ -19,8 +19,7 @@ defmodule FLHook.Codec do
      %CodecError{
        direction: :decode,
        codec: codec,
-       value: value,
-       reason: :invalid_mode
+       value: value
      }}
   end
 
@@ -38,8 +37,7 @@ defmodule FLHook.Codec do
      %CodecError{
        direction: :encode,
        codec: codec,
-       value: value,
-       reason: :invalid_mode
+       value: value
      }}
   end
 end
