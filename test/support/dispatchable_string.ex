@@ -1,4 +1,4 @@
-defmodule FLHook.Test.DispatchableString do
+defmodule FLHook.DispatchableString do
   defstruct [:cmd]
 
   defimpl FLHook.Dispatchable do

@@ -3,12 +3,14 @@ defmodule FLHook.Client do
 
   require Logger
 
+  alias __MODULE__
   alias FLHook.Client.Reply
   alias FLHook.Codec
   alias FLHook.CodecError
   alias FLHook.Command
   alias FLHook.CommandError
   alias FLHook.Config
+  alias FLHook.ConfigError
   alias FLHook.Event
   alias FLHook.HandshakeError
   alias FLHook.InvalidOperationError
@@ -22,32 +24,90 @@ defmodule FLHook.Client do
   @send_timeout 5000
   @welcome_msg "Welcome to FLHack"
 
+  @callback start_link(Keyword.t()) :: GenServer.on_start()
+
+  @callback stop(term) :: :ok
+
+  @callback cmd(Command.command()) ::
+              {:ok, Result.t()}
+              | {:error,
+                 CodecError.t()
+                 | CommandError.t()
+                 | InvalidOperationError.t()
+                 | SocketError.t()}
+
+  @callback cmd!(Command.command()) :: Result.t() | no_return
+
+  @callback subscribe() :: :ok | {:error, InvalidOperationError.t()}
+
+  @callback subscribe(GenServer.server()) ::
+              :ok | {:error, InvalidOperationError.t()}
+
+  @callback unsubscribe() :: :ok | {:error, InvalidOperationError.t()}
+
+  @callback unsubscribe(GenServer.server()) ::
+              :ok | {:error, InvalidOperationError.t()}
+
   defmacro __using__(opts) do
+    otp_app = Keyword.fetch!(opts, :otp_app)
+
     quote do
-      @behaviour unquote(__MODULE__)
+      @behaviour Client
 
       @spec __config__() :: Config.t()
       def __config__ do
-        unquote(opts[:otp_app])
+        unquote(otp_app)
         |> Application.get_env(__MODULE__, [])
         |> Config.new()
       end
 
+      @spec child_spec(term) :: Supervisor.child_spec()
+      def child_spec(opts) do
+        %{
+          id: __MODULE__,
+          start: {__MODULE__, :start_link, [opts]}
+        }
+      end
+
+      @impl Client
       def start_link(opts \\ []) do
-        opts = Keyword.put(opts, :name, __MODULE__)
-        unquote(__MODULE__).start_link(__config__(), opts)
+        opts = Keyword.put_new(opts, :name, __MODULE__)
+        Client.start_link(__config__(), opts)
       end
 
+      @impl Client
       def stop(reason \\ :normal) do
-        unquote(__MODULE__).stop(__MODULE__, reason)
+        Client.stop(__MODULE__, reason)
       end
 
+      @impl Client
       def cmd(cmd) do
-        unquote(__MODULE__).cmd(__MODULE__, cmd)
+        Client.cmd(__MODULE__, cmd)
       end
 
+      @impl Client
       def cmd!(cmd) do
-        unquote(__MODULE__).cmd!(__MODULE__, cmd)
+        Client.cmd!(__MODULE__, cmd)
+      end
+
+      @impl Client
+      def subscribe do
+        Client.subscribe(__MODULE__)
+      end
+
+      @impl Client
+      def subscribe(subscriber) do
+        Client.subscribe(__MODULE__, subscriber)
+      end
+
+      @impl Client
+      def unsubscribe do
+        Client.unsubscribe(__MODULE__)
+      end
+
+      @impl Client
+      def unsubscribe(subscriber) do
+        Client.unsubscribe(__MODULE__, subscriber)
       end
     end
   end
@@ -108,22 +168,26 @@ defmodule FLHook.Client do
 
   @impl true
   def init(config) do
-    subscriptions =
-      if config.event_mode do
-        Map.new(config.subscribers, fn subscriber ->
-          {subscriber, Process.monitor(subscriber)}
-        end)
-      else
-        %{}
-      end
+    if config.password do
+      subscriptions =
+        if config.event_mode do
+          Map.new(config.subscribers, fn subscriber ->
+            {subscriber, Process.monitor(subscriber)}
+          end)
+        else
+          %{}
+        end
 
-    {:connect, nil,
-     %{
-       config: config,
-       queue: :queue.new(),
-       socket: nil,
-       subscriptions: subscriptions
-     }}
+      {:connect, nil,
+       %{
+         config: config,
+         queue: :queue.new(),
+         socket: nil,
+         subscriptions: subscriptions
+       }}
+    else
+      {:stop, %ConfigError{message: "No password specified"}}
+    end
   end
 
   @impl true

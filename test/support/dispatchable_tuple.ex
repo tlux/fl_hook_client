@@ -1,4 +1,4 @@
-defmodule FLHook.Test.DispatchableTuple do
+defmodule FLHook.DispatchableTuple do
   defstruct [:cmd, :args]
 
   defimpl FLHook.Dispatchable do

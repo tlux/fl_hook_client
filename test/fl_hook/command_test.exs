@@ -2,7 +2,8 @@ defmodule FLHook.CommandTest do
   use ExUnit.Case, async: true
 
   alias FLHook.Command
-  alias FLHook.Test.{DispatchableString, DispatchableTuple}
+  alias FLHook.DispatchableString
+  alias FLHook.DispatchableTuple
 
   describe "to_string/1" do
     test "serialize string" do

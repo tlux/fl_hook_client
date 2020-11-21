@@ -1,6 +1,5 @@
 defmodule FLHook.Config do
   alias FLHook.Codec
-  alias FLHook.ConfigError
 
   defstruct [
     :password,
@@ -25,11 +24,7 @@ defmodule FLHook.Config do
         }
 
   @spec new(Keyword.t() | %{optional(atom) => any}) :: t
-  def new(opts) do
-    unless opts[:password] do
-      raise ConfigError, "No password specified"
-    end
-
+  def new(opts \\ []) do
     struct!(__MODULE__, opts)
   end
 end
