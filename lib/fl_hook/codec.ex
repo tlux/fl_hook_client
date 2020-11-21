@@ -3,34 +3,41 @@ defmodule FLHook.Codec do
 
   alias FLHook.CodecError
 
-  # maybe also :ascii | :ascii_encrypted | :unicode_encrypted in the future
-  @type mode :: :unicode
+  @type codec :: :ascii | :unicode
 
-  @spec decode(mode, binary) :: {:ok, binary} | {:error, CodecError.t()}
+  @spec decode(codec, binary) :: {:ok, binary} | {:error, CodecError.t()}
+  def decode(:ascii, value) do
+    {:ok, value}
+  end
+
   def decode(:unicode, value) do
     {:ok, :unicode.characters_to_binary(value, {:utf16, :little}, :utf8)}
   end
 
-  def decode(mode, value) do
+  def decode(codec, value) do
     {:error,
      %CodecError{
        direction: :decode,
-       mode: mode,
+       codec: codec,
        value: value,
        reason: :invalid_mode
      }}
   end
 
-  @spec encode(mode, binary) :: {:ok, binary} | {:error, CodecError.t()}
+  @spec encode(codec, binary) :: {:ok, binary} | {:error, CodecError.t()}
+  def encode(:ascii, value) do
+    {:ok, value}
+  end
+
   def encode(:unicode, value) do
     {:ok, :unicode.characters_to_binary(value, :utf8, {:utf16, :little})}
   end
 
-  def encode(mode, value) do
+  def encode(codec, value) do
     {:error,
      %CodecError{
        direction: :encode,
-       mode: mode,
+       codec: codec,
        value: value,
        reason: :invalid_mode
      }}

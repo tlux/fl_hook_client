@@ -3,15 +3,15 @@ defmodule FLHook.XMLText do
 
   alias FLHook.Utils
 
-  defstruct chardata: []
+  defstruct chardata: ""
 
-  @char_map % {
-    "<" => "&#60;" 
-    ">" => "&#62;"
+  @char_map %{
+    "<" => "&#60;",
+    ">" => "&#62;",
     "&" => "&#38;"
   }
 
-  @format_flags %{
+  @flags %{
     bold: 1,
     italic: 2,
     underline: 4,
@@ -25,86 +25,131 @@ defmodule FLHook.XMLText do
 
   @type t :: %__MODULE__{chardata: IO.chardata()}
 
-  @type flag :: 
-    :bold |
-    :italic |
-    :underline |
-    :big |
-    :big_wide |
-    :very_big |
-    :smoothest |
-    :smoother |
-    :small
+  @type color ::
+          {red :: non_neg_integer, green :: non_neg_integer,
+           blue :: non_neg_integer}
+          | String.t()
+
+  @type flag ::
+          :bold
+          | :italic
+          | :underline
+          | :big
+          | :big_wide
+          | :very_big
+          | :smoothest
+          | :smoother
+          | :small
 
   @spec new() :: t
   def new do
     %__MODULE__{}
   end
 
-  @spec format(t, String.t(), [flag]) :: t
+  @spec new([
+          {:format, color}
+          | {:format, color, flag | [flag]}
+          | {:text, String.t()}
+          | String.t()
+        ]) :: t
+  def new(nodes) do
+    Enum.reduce(nodes, %__MODULE__{}, fn
+      {:format, color}, xml_text ->
+        format(xml_text, color)
+
+      {:format, color, flags}, xml_text ->
+        format(xml_text, color, flags)
+
+      {:text, text}, xml_text ->
+        text(xml_text, text)
+
+      text, xml_text when is_binary(text) ->
+        text(xml_text, text)
+
+      node, _xml_text ->
+        raise ArgumentError, "invalid node: #{inspect(node)}"
+    end)
+  end
+
+  @spec format(
+          t,
+          color,
+          flag | [flag]
+        ) :: t
   def format(%__MODULE__{} = xml_text, color, flags \\ []) do
-    color = color_to_value(color) 
-    format = flags_to_value(flags)
-    add_node(xml_text, ~s(<TRA data="0x#{color}#{format}" mask="-1"/>))
+    color = build_color(color)
+    flags = build_flags(flags)
+    node = ~s(<TRA data="0x#{color}#{flags}" mask="-1"/>)
+    %{xml_text | chardata: [xml_text.chardata, node]}
+  end
+
+  defp build_flags(flags) do
+    flags
+    |> List.wrap()
+    |> Enum.reduce(0, fn flag, value ->
+      case Map.fetch(@flags, flag) do
+        {:ok, flag_value} ->
+          Bitwise.bor(value, flag_value)
+
+        :error ->
+          raise ArgumentError, "invalid format flag (#{inspect(flag)})"
+      end
+    end)
+    |> to_hex()
   end
 
   @spec text(t, String.t()) :: t
   def text(%__MODULE__{} = xml_text, text) do
     text = Utils.map_chars(text, @char_map)
-    add_node(xml_text, ~s(<TEXT>#{text}</TEXT>))
+    node = ~s(<TEXT>#{text}</TEXT>)
+    %{xml_text | chardata: [xml_text.chardata, node]}
   end
 
-  defp add_node(xml_text, str) do
-    %{xml_text | chardata: [xml_text.chardata, str]}
+  defp build_color(color) do
+    color
+    |> normalize_color()
+    |> Enum.map(&to_hex/1)
+    |> Enum.join()
   end
 
-  defp color_to_value({red, green, blue}) do
+  defguardp is_rgb_value(value) when value in 0..255
+
+  defp normalize_color({red, green, blue})
+       when is_rgb_value(red) and is_rgb_value(green) and is_rgb_value(blue) do
     [blue, green, red]
-    |> Enum.map(fn
-      value when value in 0..255 -> to_hex(value)
-      _ -> raise ArgumentError, "invalid RGB color"
-    end)
-    |> Enum.join()
   end
 
-  defp color_to_value(<<"#", code::binary-size(6)>>), do: color_to_value(code)
-
-  defp color_to_value(<<"#", code::binary-size(3)>>), do: color_to_value(code)
-
-  defp color_to_value(
-        <<red::binary-size(2), green::binary-size(2), blue::binary-size(2)>>
-      ) do
-    with {red, _} <- Integer.parse(red, 16),
-         {green, _} <- Integer.parse(green, 16),
-         {blue, _} <- Integer.parse(blue, 16) do
-      color_to_value({red, green, blue})
-    else
-      _ -> raise ArgumentError, "invalid RGB color"     
-    end
+  defp normalize_color(<<"#", code::binary-size(6)>>) do
+    normalize_color(code)
   end
 
-  defp color_to_value(
-        <<red::binary-size(1), green::binary-size(1), blue::binary-size(1)>>
-      ) do
-    [red, green, blue]
+  defp normalize_color(<<"#", code::binary-size(3)>>) do
+    normalize_color(code)
+  end
+
+  defp normalize_color(
+         <<red::binary-size(2), green::binary-size(2), blue::binary-size(2)>>
+       ) do
+    Enum.map([blue, green, red], &String.to_integer(&1, 16))
+  end
+
+  defp normalize_color(
+         <<red::binary-size(1), green::binary-size(1), blue::binary-size(1)>>
+       ) do
+    [blue, green, red]
     |> Enum.map(&String.duplicate(&1, 2))
-    |> Enum.join()
-    |> color_to_value()
+    |> Enum.map(&String.to_integer(&1, 16))
   end
 
-  defp flags_to_value(flags) do
-    flags
-    |> Map.take(flags)
-    |> Enum.reduce(0, fn {_flag, value}, acc ->
-      Bitwise.bor(acc, value)
-    end)
-    |> to_hex()
+  defp normalize_color(_) do
+    raise ArgumentError, "invalid RGB color"
   end
 
   defp to_hex(value) do
     value
     |> Integer.to_string(16)
     |> String.upcase()
+    |> String.pad_leading(2, "0")
   end
 
   @spec to_string(t) :: String.t()

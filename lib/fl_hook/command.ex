@@ -6,7 +6,8 @@ defmodule FLHook.Command do
     "\n" => "\\n"
   }
 
-  @spec to_string(String.Chars.t() | {String.t(), [String.Chars.t()]}) :: String.t()
+  @spec to_string(String.Chars.t() | {String.t(), [String.Chars.t()]}) ::
+          String.t()
   def to_string({cmd, []}) when is_binary(cmd), do: cmd
 
   def to_string({cmd, args}) when is_binary(cmd) and is_list(args) do

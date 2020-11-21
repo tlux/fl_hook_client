@@ -3,11 +3,11 @@ defmodule FLHook.CodecError do
   An error indicating that decoding or encoding did not work.
   """
 
-  defexception [:direction, :mode, :value, :reason]
+  defexception [:direction, :codec, :value, :reason]
 
   @type t :: %__MODULE__{
           direction: :decode | :encode,
-          mode: FLHook.Codec.mode(),
+          codec: FLHook.Codec.codec(),
           value: binary,
           reason: any
         }
@@ -15,7 +15,7 @@ defmodule FLHook.CodecError do
   @impl true
   def message(error) do
     base_msg =
-      "Unable to #{error.direction} value in #{inspect(error.mode)} mode"
+      "Unable to #{error.direction} value in #{inspect(error.codec)} mode"
 
     if error.reason do
       "#{base_msg} (#{error.reason})"
