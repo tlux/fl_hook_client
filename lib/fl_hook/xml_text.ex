@@ -101,7 +101,7 @@ defmodule FLHook.XMLText do
   @spec text(t, String.t()) :: t
   def text(%__MODULE__{} = xml_text, text) do
     text = Utils.map_chars(text, @char_map)
-    node = ~s(<TEXT>#{text}</TEXT>)
+    node = "<TEXT>#{text}</TEXT>"
     %{xml_text | chardata: [xml_text.chardata, node]}
   end
 

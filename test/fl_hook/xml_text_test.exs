@@ -10,7 +10,28 @@ defmodule FLHook.XMLTextTest do
   end
 
   describe "new/1" do
-    test "compose new XMLText"
+    test "compose new XMLText" do
+      assert XMLText.to_string(
+               XMLText.new([
+                 {:format, {255, 127, 0}},
+                 "Hello ",
+                 {:format, {255, 255, 255}, :italic},
+                 "World",
+                 {:format, "#FF0000", :small},
+                 {:text, "!"},
+                 {:format, "00ff00", [:big, :bold]},
+                 {:text, "!"}
+               ])
+             ) ==
+               ~s(<TRA data="0x007FFF00" mask="-1"/>) <>
+                 ~s(<TEXT>Hello </TEXT>) <>
+                 ~s(<TRA data="0xFFFFFF02" mask="-1"/>) <>
+                 ~s(<TEXT>World</TEXT>) <>
+                 ~s(<TRA data="0x0000FF90" mask="-1"/>) <>
+                 ~s(<TEXT>!</TEXT>) <>
+                 ~s(<TRA data="0x00FF0009" mask="-1"/>) <>
+                 ~s(<TEXT>!</TEXT>)
+    end
   end
 
   describe "format/2" do
@@ -106,6 +127,13 @@ defmodule FLHook.XMLTextTest do
     test "add text node" do
       assert XMLText.to_string(XMLText.text(%XMLText{}, @text)) ==
                "<TEXT>#{@text}</TEXT>"
+    end
+
+    test "add text node with escaping" do
+      assert XMLText.to_string(
+               XMLText.text(%XMLText{}, "The <, & and > characters are escaped")
+             ) ==
+               "<TEXT>The &#60;, &#38; and &#62; characters are escaped</TEXT>"
     end
 
     test "add text node after format node" do
