@@ -22,10 +22,50 @@ defmodule FLHook.Client do
   @send_timeout 5000
   @welcome_msg "Welcome to FLHack"
 
-  @spec start_link(Keyword.t()) :: GenServer.on_start()
-  def start_link(opts \\ []) do
+  defmacro __using__(opts) do
+    quote do
+      @behaviour unquote(__MODULE__)
+
+      @spec __config__() :: Config.t()
+      def __config__ do
+        unquote(opts[:otp_app])
+        |> Application.get_env(__MODULE__, [])
+        |> Config.new()
+      end
+
+      def start_link(opts \\ []) do
+        opts = Keyword.put(opts, :name, __MODULE__)
+        unquote(__MODULE__).start_link(__config__(), opts)
+      end
+
+      def stop(reason \\ :normal) do
+        unquote(__MODULE__).stop(__MODULE__, reason)
+      end
+
+      def cmd(cmd) do
+        unquote(__MODULE__).cmd(__MODULE__, cmd)
+      end
+
+      def cmd!(cmd) do
+        unquote(__MODULE__).cmd!(__MODULE__, cmd)
+      end
+    end
+  end
+
+  @spec start_link(Config.t() | Keyword.t()) :: GenServer.on_start()
+  def start_link(%Config{} = config) do
+    start_link(config, [])
+  end
+
+  def start_link(opts) when is_list(opts) do
     {opts, init_opts} = Keyword.split(opts, [:name])
-    Connection.start_link(__MODULE__, Config.new(init_opts), opts)
+    config = Config.new(init_opts)
+    start_link(config, opts)
+  end
+
+  @spec start_link(Config.t(), Keyword.t()) :: GenServer.on_start()
+  def start_link(%Config{} = config, opts) do
+    Connection.start_link(__MODULE__, config, opts)
   end
 
   @spec stop(GenServer.server(), term) :: :ok
