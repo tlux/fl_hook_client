@@ -1,9 +1,12 @@
 defmodule FLHook.Params do
+  alias FLHook.Utils
+
   @type params :: %{optional(String.t()) => String.t()}
 
   @doc false
   @spec parse(String.t(), Keyword.t()) :: params
   def parse(str, opts \\ []) when is_binary(str) do
+    str = String.trim_trailing(str, Utils.line_sep())
     str_len = String.length(str)
     spread = opts[:spread]
 

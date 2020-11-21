@@ -6,7 +6,7 @@ defmodule FLHook.ParamsTest do
   describe "parse/1" do
     test "parses result" do
       assert Params.parse(
-               ~s(id=123 name=Truelight ip=192.168.178.1 text=Hello World)
+               "id=123 name=Truelight ip=192.168.178.1 text=Hello World\r\n"
              ) ==
                %{
                  "id" => "123",
@@ -15,7 +15,7 @@ defmodule FLHook.ParamsTest do
                  "text" => "Hello"
                }
 
-      assert Params.parse("Hello=World") == %{"Hello" => "World"}
+      assert Params.parse("Hello=World\r\n") == %{"Hello" => "World"}
     end
 
     test "empty map when no matches in string" do
@@ -34,7 +34,7 @@ defmodule FLHook.ParamsTest do
   describe "parse/2" do
     test "parses result" do
       assert Params.parse(
-               ~s(id=123 name=Truelight text=Hello World ignored=param),
+               ~s(id=123 name=Truelight text=Hello World ignored=param\r\n),
                spread: "text"
              ) ==
                %{

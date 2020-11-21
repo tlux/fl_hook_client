@@ -206,7 +206,7 @@ defmodule FLHook.Client do
   @impl true
   def connect(_info, %{config: config} = state) do
     with {:ok, socket} <- socket_connect(config),
-         :ok <- verify_welcome_msg(socket, config.codec),
+         :ok <- verify_welcome_msg(socket, config),
          :ok <- authenticate(socket, config),
          :ok <- event_mode(socket, config) do
       :ok = config.tcp_adapter.controlling_process(socket, self())
@@ -253,7 +253,7 @@ defmodule FLHook.Client do
   end
 
   def handle_call({:cmd, cmd}, from, state) do
-    case send_cmd(state.socket, state.config.codec, cmd) do
+    case send_cmd(state.socket, state.config, cmd) do
       :ok ->
         queue = :queue.in(%Reply{client: from}, state.queue)
         {:noreply, %{state | queue: queue}}
@@ -442,13 +442,13 @@ defmodule FLHook.Client do
 
   defp cmd_passive(socket, config, cmd) do
     with :ok <- send_cmd(socket, config, Command.to_string(cmd)),
-         {:ok, result} <- read_cmd_result(socket, config.codec) do
+         {:ok, result} <- read_cmd_result(socket, config) do
       {:ok, result}
     end
   end
 
-  defp verify_welcome_msg(socket, codec) do
-    case read_chunk(socket, codec) do
+  defp verify_welcome_msg(socket, config) do
+    case read_chunk(socket, config) do
       {:ok, @welcome_msg <> _} -> :ok
       {:ok, message} -> {:error, %HandshakeError{actual_message: message}}
       error -> error
