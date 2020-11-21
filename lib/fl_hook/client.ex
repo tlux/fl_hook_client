@@ -192,7 +192,7 @@ defmodule FLHook.Client do
 
   @impl true
   def connect(_info, %{config: config} = state) do
-    with {:ok, socket} <- socket_connect(config.host, config.port),
+    with {:ok, socket} <- socket_connect(config),
          :ok <- verify_welcome_msg(socket, config.codec),
          :ok <- authenticate(socket, config.codec, config.password),
          :ok <- event_mode(socket, config.codec, config.event_mode) do
@@ -366,11 +366,11 @@ defmodule FLHook.Client do
 
   # Helpers
 
-  defp socket_connect(host, port) do
+  defp socket_connect(config) do
     with {:error, reason} <-
-           :gen_tcp.connect(
-             to_charlist(host),
-             port,
+           config.tcp_adapter.connect(
+             to_charlist(config.host),
+             config.port,
              [:binary, active: false, send_timeout: @send_timeout],
              @connect_timeout
            ) do
@@ -428,7 +428,7 @@ defmodule FLHook.Client do
   end
 
   defp cmd_passive(socket, codec, cmd) do
-    with :ok <- send_cmd(socket, codec, cmd),
+    with :ok <- send_cmd(socket, codec, Command.to_string(cmd)),
          {:ok, result} <- read_cmd_result(socket, codec) do
       {:ok, result}
     end
@@ -443,7 +443,7 @@ defmodule FLHook.Client do
   end
 
   defp authenticate(socket, codec, password) do
-    with {:ok, _} <- cmd_passive(socket, codec, "pass #{password}") do
+    with {:ok, _} <- cmd_passive(socket, codec, {"pass", [password]}) do
       :ok
     end
   end
