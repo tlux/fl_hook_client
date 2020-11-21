@@ -14,6 +14,7 @@ defmodule FLHook.Event do
           payload: String.t()
         }
 
+  @doc false
   @spec parse(String.t()) :: t | no_return
   def parse("") do
     raise ArgumentError, "Unable to parse empty event payload"

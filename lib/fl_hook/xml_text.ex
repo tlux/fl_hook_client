@@ -49,8 +49,8 @@ defmodule FLHook.XMLText do
   @spec new([
           {:format, color}
           | {:format, color, flag | [flag]}
-          | {:text, String.t()}
-          | String.t()
+          | {:text, String.Chars.t()}
+          | String.Chars.t()
         ]) :: t
   def new(nodes) do
     Enum.reduce(nodes, %__MODULE__{}, fn
@@ -68,11 +68,7 @@ defmodule FLHook.XMLText do
     end)
   end
 
-  @spec format(
-          t,
-          color,
-          flag | [flag]
-        ) :: t
+  @spec format(t, color, flag | [flag]) :: t
   def format(%__MODULE__{} = xml_text, color, flags \\ []) do
     color = build_color(color)
     flags = build_flags(flags)

@@ -18,7 +18,7 @@ defmodule FLHook.Config do
           host: String.t(),
           inet_adapter: module,
           password: String.t(),
-          port: non_neg_integer,
+          port: :inet.port_number(),
           subscribers: [GenServer.server()],
           tcp_adapter: module
         }

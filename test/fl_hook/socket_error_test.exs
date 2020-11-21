@@ -9,6 +9,11 @@ defmodule FLHook.SocketErrorTest do
                "Socket error: connection closed"
     end
 
+    test "timeout" do
+      assert Exception.message(%SocketError{reason: :timeout}) ==
+               "Socket error: connection timed out"
+    end
+
     test "econnrefused" do
       assert Exception.message(%SocketError{reason: :econnrefused}) ==
                "Socket error: connection refused"

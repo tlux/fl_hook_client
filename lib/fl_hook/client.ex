@@ -24,11 +24,11 @@ defmodule FLHook.Client do
   @send_timeout 5000
   @welcome_msg "Welcome to FLHack"
 
-  @callback start_link(Keyword.t()) :: GenServer.on_start()
+  @callback start_link(opts :: Keyword.t()) :: GenServer.on_start()
 
-  @callback stop(term) :: :ok
+  @callback stop(reason :: term) :: :ok
 
-  @callback cmd(Command.command()) ::
+  @callback cmd(cmd :: Command.command()) ::
               {:ok, Result.t()}
               | {:error,
                  CodecError.t()
@@ -36,16 +36,16 @@ defmodule FLHook.Client do
                  | InvalidOperationError.t()
                  | SocketError.t()}
 
-  @callback cmd!(Command.command()) :: Result.t() | no_return
+  @callback cmd!(cmd :: Command.command()) :: Result.t() | no_return
 
   @callback subscribe() :: :ok | {:error, InvalidOperationError.t()}
 
-  @callback subscribe(GenServer.server()) ::
+  @callback subscribe(subscriber :: GenServer.server()) ::
               :ok | {:error, InvalidOperationError.t()}
 
   @callback unsubscribe() :: :ok | {:error, InvalidOperationError.t()}
 
-  @callback unsubscribe(GenServer.server()) ::
+  @callback unsubscribe(subscriber :: GenServer.server()) ::
               :ok | {:error, InvalidOperationError.t()}
 
   defmacro __using__(opts) do
@@ -54,6 +54,7 @@ defmodule FLHook.Client do
     quote do
       @behaviour Client
 
+      @doc false
       @spec __config__() :: Config.t()
       def __config__ do
         unquote(otp_app)
@@ -61,6 +62,7 @@ defmodule FLHook.Client do
         |> Config.new()
       end
 
+      @doc false
       @spec child_spec(term) :: Supervisor.child_spec()
       def child_spec(opts) do
         %{
@@ -164,6 +166,17 @@ defmodule FLHook.Client do
     Connection.call(server, {:unsubscribe, subscriber})
   end
 
+  # Child Spec
+
+  @doc false
+  @spec child_spec(term) :: Supervisor.child_spec()
+  def child_spec(opts) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [opts]}
+    }
+  end
+
   # Callbacks
 
   @impl true
@@ -194,8 +207,8 @@ defmodule FLHook.Client do
   def connect(_info, %{config: config} = state) do
     with {:ok, socket} <- socket_connect(config),
          :ok <- verify_welcome_msg(socket, config.codec),
-         :ok <- authenticate(socket, config.codec, config.password),
-         :ok <- event_mode(socket, config.codec, config.event_mode) do
+         :ok <- authenticate(socket, config),
+         :ok <- event_mode(socket, config) do
       :ok = config.tcp_adapter.controlling_process(socket, self())
       config.inet_adapter.setopts(socket, active: :once)
       {:ok, %{state | socket: socket}}
@@ -378,10 +391,10 @@ defmodule FLHook.Client do
     end
   end
 
-  defp read_chunk(socket, codec) do
+  defp read_chunk(socket, config) do
     with {:socket, {:ok, value}} <-
-           {:socket, :gen_tcp.recv(socket, 0, @passive_recv_timeout)},
-         {:codec, {:ok, decoded}} <- {:codec, Codec.decode(codec, value)} do
+           {:socket, config.tcp_adapter.recv(socket, 0, @passive_recv_timeout)},
+         {:codec, {:ok, decoded}} <- {:codec, Codec.decode(config.codec, value)} do
       {:ok, decoded}
     else
       {:codec, error} -> error
@@ -389,8 +402,8 @@ defmodule FLHook.Client do
     end
   end
 
-  defp read_cmd_result(socket, codec) do
-    case do_read_cmd_result(%Reply{}, socket, codec) do
+  defp read_cmd_result(socket, config) do
+    case do_read_cmd_result(%Reply{}, socket, config) do
       %Reply{status: :ok} = reply ->
         {:ok, Reply.to_result(reply)}
 
@@ -402,20 +415,20 @@ defmodule FLHook.Client do
     end
   end
 
-  defp do_read_cmd_result(%Reply{status: :pending} = reply, socket, codec) do
-    with {:ok, chunk} <- read_chunk(socket, codec) do
+  defp do_read_cmd_result(%Reply{status: :pending} = reply, socket, config) do
+    with {:ok, chunk} <- read_chunk(socket, config) do
       reply
       |> Reply.add_chunk(chunk)
-      |> do_read_cmd_result(socket, codec)
+      |> do_read_cmd_result(socket, config)
     end
   end
 
-  defp do_read_cmd_result(%Reply{} = reply, _socket, _codec), do: reply
+  defp do_read_cmd_result(%Reply{} = reply, _socket, _config), do: reply
 
-  defp send_msg(socket, codec, value) do
+  defp send_msg(socket, config, value) do
     with {:codec, {:ok, encoded}} <-
-           {:codec, Codec.encode(codec, value)},
-         {:socket, :ok} <- {:socket, :gen_tcp.send(socket, encoded)} do
+           {:codec, Codec.encode(config.codec, value)},
+         {:socket, :ok} <- {:socket, config.tcp_adapter.send(socket, encoded)} do
       :ok
     else
       {:codec, error} -> error
@@ -423,13 +436,13 @@ defmodule FLHook.Client do
     end
   end
 
-  defp send_cmd(socket, codec, cmd) do
-    send_msg(socket, codec, cmd <> Utils.line_sep())
+  defp send_cmd(socket, config, cmd) do
+    send_msg(socket, config, cmd <> Utils.line_sep())
   end
 
-  defp cmd_passive(socket, codec, cmd) do
-    with :ok <- send_cmd(socket, codec, Command.to_string(cmd)),
-         {:ok, result} <- read_cmd_result(socket, codec) do
+  defp cmd_passive(socket, config, cmd) do
+    with :ok <- send_cmd(socket, config, Command.to_string(cmd)),
+         {:ok, result} <- read_cmd_result(socket, config.codec) do
       {:ok, result}
     end
   end
@@ -442,16 +455,16 @@ defmodule FLHook.Client do
     end
   end
 
-  defp authenticate(socket, codec, password) do
-    with {:ok, _} <- cmd_passive(socket, codec, {"pass", [password]}) do
+  defp authenticate(socket, config) do
+    with {:ok, _} <- cmd_passive(socket, config, {"pass", [config.password]}) do
       :ok
     end
   end
 
-  defp event_mode(_socket, _codec, false), do: :ok
+  defp event_mode(_socket, %{event_mode: false}), do: :ok
 
-  defp event_mode(socket, codec, true) do
-    with {:ok, _} <- cmd_passive(socket, codec, "eventmode") do
+  defp event_mode(socket, config) do
+    with {:ok, _} <- cmd_passive(socket, config, "eventmode") do
       :ok
     end
   end

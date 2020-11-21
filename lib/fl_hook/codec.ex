@@ -1,6 +1,4 @@
 defmodule FLHook.Codec do
-  @moduledoc false
-
   alias FLHook.CodecError
 
   @type codec :: :ascii | :unicode

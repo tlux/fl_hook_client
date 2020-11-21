@@ -3,11 +3,13 @@ defmodule FLHook.CodecError do
   An error indicating that decoding or encoding did not work.
   """
 
-  defexception [:direction, :codec, :value, :reason]
+  alias FLHook.Codec
+
+  defexception [:direction, :codec, :value]
 
   @type t :: %__MODULE__{
           direction: :decode | :encode,
-          codec: FLHook.Codec.codec(),
+          codec: Codec.codec(),
           value: binary
         }
 
