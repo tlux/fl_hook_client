@@ -41,10 +41,6 @@ defmodule FLHook.MixProject do
     ]
   end
 
-  defp description do
-    "An Elixir client to connect with a FLHook socket."
-  end
-
   defp package do
     [
       licenses: ["MIT"],

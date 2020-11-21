@@ -6,6 +6,7 @@ defmodule FLHook.Client do
   alias FLHook.Client.Reply
   alias FLHook.Codec
   alias FLHook.CodecError
+  alias FLHook.Command
   alias FLHook.CommandError
   alias FLHook.Event
   alias FLHook.HandshakeError
@@ -31,7 +32,7 @@ defmodule FLHook.Client do
     GenServer.stop(server, reason)
   end
 
-  @spec cmd(GenServer.server(), String.t()) ::
+  @spec cmd(GenServer.server(), Command.command()) ::
           {:ok, Result.t()}
           | {:error,
              CodecError.t()
@@ -39,10 +40,10 @@ defmodule FLHook.Client do
              | InvalidOperationError.t()
              | SocketError.t()}
   def cmd(server, cmd) do
-    Connection.call(server, {:cmd, cmd})
+    Connection.call(server, {:cmd, Command.to_string(cmd)})
   end
 
-  @spec cmd!(GenServer.server(), String.t()) :: Result.t() | no_return
+  @spec cmd!(GenServer.server(), Command.command()) :: Result.t() | no_return
   def cmd!(server, cmd) do
     case cmd(server, cmd) do
       {:ok, result} -> result

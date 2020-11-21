@@ -1,4 +1,5 @@
 defmodule FLHook.Command do
+  alias FLHook.Dispatchable
   alias FLHook.Utils
 
   @char_map %{
@@ -6,18 +7,29 @@ defmodule FLHook.Command do
     "\n" => "\\n"
   }
 
-  @spec to_string(String.Chars.t() | {String.t(), [String.Chars.t()]}) ::
-          String.t()
-  def to_string({cmd, []}) when is_binary(cmd), do: cmd
+  @type command ::
+          String.t() | {String.t(), [String.Chars.t()]} | Dispatchable.t()
 
+  @doc false
+  @spec to_string(command) ::
+          String.t()
   def to_string({cmd, args}) when is_binary(cmd) and is_list(args) do
-    args_str = args |> Enum.map(&__MODULE__.to_string/1) |> Enum.join(" ")
-    "#{cmd} #{args_str}"
+    [cmd | args]
+    |> Enum.join(" ")
+    |> escape_newlines()
   end
 
-  def to_string(cmd) do
-    cmd
-    |> Kernel.to_string()
-    |> Utils.map_chars(cmd, @char_map)
+  def to_string(cmd) when is_binary(cmd) do
+    escape_newlines(cmd)
+  end
+
+  def to_string(dispatchable) do
+    dispatchable
+    |> Dispatchable.to_cmd()
+    |> __MODULE__.to_string()
+  end
+
+  defp escape_newlines(str) do
+    Utils.map_chars(str, @char_map)
   end
 end

@@ -101,14 +101,30 @@ defmodule FLHook.XMLTextTest do
   end
 
   describe "text/2" do
-    # TODO
-  end
+    @text "Zwölf Boxkämpfer jagen Viktor quer über den großen Sylter Deich"
 
-  describe "to_string/1" do
-    # TODO
+    test "add text node" do
+      assert XMLText.to_string(XMLText.text(%XMLText{}, @text)) ==
+               "<TEXT>#{@text}</TEXT>"
+    end
+
+    test "add text node after format node" do
+      assert XMLText.new()
+             |> XMLText.format({52, 200, 189}, :big)
+             |> XMLText.text(@text)
+             |> XMLText.to_string() ==
+               ~s(<TRA data="0xBDC83408" mask="-1"/><TEXT>#{@text}</TEXT>)
+    end
   end
 
   describe "Kernel.to_string/1" do
-    # TODO
+    test "delegates to FLHook.XMLText" do
+      xml_text =
+        XMLText.new()
+        |> XMLText.format({52, 200, 189}, :big)
+        |> XMLText.text(@text)
+
+      assert XMLText.to_string(xml_text) == to_string(xml_text)
+    end
   end
 end
