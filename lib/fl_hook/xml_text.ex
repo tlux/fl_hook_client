@@ -63,11 +63,8 @@ defmodule FLHook.XMLText do
       {:text, text}, xml_text ->
         text(xml_text, text)
 
-      text, xml_text when is_binary(text) ->
+      text, xml_text ->
         text(xml_text, text)
-
-      node, _xml_text ->
-        raise ArgumentError, "invalid node: #{inspect(node)}"
     end)
   end
 
@@ -98,9 +95,9 @@ defmodule FLHook.XMLText do
     |> to_hex()
   end
 
-  @spec text(t, String.t()) :: t
+  @spec text(t, String.Chars.t()) :: t
   def text(%__MODULE__{} = xml_text, text) do
-    text = Utils.map_chars(text, @char_map)
+    text = text |> Kernel.to_string() |> Utils.map_chars(@char_map)
     node = "<TEXT>#{text}</TEXT>"
     %{xml_text | chardata: [xml_text.chardata, node]}
   end

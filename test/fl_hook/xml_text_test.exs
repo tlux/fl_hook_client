@@ -16,7 +16,8 @@ defmodule FLHook.XMLTextTest do
                  {:format, {255, 127, 0}},
                  "Hello ",
                  {:format, {255, 255, 255}, :italic},
-                 "World",
+                 "World ",
+                 1337,
                  {:format, "#FF0000", :small},
                  {:text, "!"},
                  {:format, "00ff00", [:big, :bold]},
@@ -26,7 +27,8 @@ defmodule FLHook.XMLTextTest do
                ~s(<TRA data="0x007FFF00" mask="-1"/>) <>
                  ~s(<TEXT>Hello </TEXT>) <>
                  ~s(<TRA data="0xFFFFFF02" mask="-1"/>) <>
-                 ~s(<TEXT>World</TEXT>) <>
+                 ~s(<TEXT>World </TEXT>) <>
+                 ~s(<TEXT>1337</TEXT>) <>
                  ~s(<TRA data="0x0000FF90" mask="-1"/>) <>
                  ~s(<TEXT>!</TEXT>) <>
                  ~s(<TRA data="0x00FF0009" mask="-1"/>) <>
@@ -127,6 +129,16 @@ defmodule FLHook.XMLTextTest do
     test "add text node" do
       assert XMLText.to_string(XMLText.text(%XMLText{}, @text)) ==
                "<TEXT>#{@text}</TEXT>"
+    end
+
+    test "add text node with number" do
+      assert XMLText.to_string(XMLText.text(%XMLText{}, 1337)) ==
+               "<TEXT>1337</TEXT>"
+    end
+
+    test "add text node with atom" do
+      assert XMLText.to_string(XMLText.text(%XMLText{}, :works_with_atoms)) ==
+               "<TEXT>works_with_atoms</TEXT>"
     end
 
     test "add text node with escaping" do
