@@ -16,9 +16,11 @@ defmodule FLHook.ConfigTest do
       assert config.codec == :unicode
       assert config.event_mode == false
       assert config.host == "localhost"
+      assert config.inet_adapter == :inet
       assert config.password == nil
       assert config.port == 1920
       assert config.subscribers == []
+      assert config.tcp_adapter == :gen_tcp
     end
 
     test "custom configuration" do
@@ -27,17 +29,21 @@ defmodule FLHook.ConfigTest do
           codec: :ascii,
           event_mode: true,
           host: "192.168.178.22",
+          inet_adapter: FLHook.MockInetAdapter,
           password: "Test1234",
           port: 1919,
-          subscribers: [self()]
+          subscribers: [self()],
+          tcp_adapter: FLHook.MockTCPAdapter
         )
 
       assert config.codec == :ascii
       assert config.event_mode == true
       assert config.host == "192.168.178.22"
+      assert config.inet_adapter == FLHook.MockInetAdapter
       assert config.password == "Test1234"
       assert config.port == 1919
       assert config.subscribers == [self()]
+      assert config.tcp_adapter == FLHook.MockTCPAdapter
     end
 
     test "raise on unknown option" do
