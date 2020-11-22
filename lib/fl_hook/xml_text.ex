@@ -1,4 +1,9 @@
 defmodule FLHook.XMLText do
+  @moduledoc """
+  The XML text module allows composing formatted text to be sent via a chat
+  command.
+  """
+
   require Bitwise
 
   alias FLHook.Utils
@@ -41,11 +46,17 @@ defmodule FLHook.XMLText do
           | :smoother
           | :small
 
+  @doc """
+  Creates a new XML text struct without any content.
+  """
   @spec new() :: t
   def new do
     %__MODULE__{}
   end
 
+  @doc """
+  Creates a new XML text struct with the specified content.
+  """
   @spec new([
           {:format, color}
           | {:format, color, flag | [flag]}
@@ -68,6 +79,10 @@ defmodule FLHook.XMLText do
     end)
   end
 
+  @doc """
+  Adds a format node the specified XML text struct. You can specify a color and
+  optional format flags.
+  """
   @spec format(t, color, flag | [flag]) :: t
   def format(%__MODULE__{} = xml_text, color, flags \\ []) do
     color = build_color(color)
@@ -76,6 +91,9 @@ defmodule FLHook.XMLText do
     %{xml_text | chardata: [xml_text.chardata, node]}
   end
 
+  @doc """
+  Adds a text node to the specified XML text struct.
+  """
   @spec text(t, String.Chars.t()) :: t
   def text(%__MODULE__{} = xml_text, text) do
     text = text |> Kernel.to_string() |> Utils.map_chars(@char_map)
@@ -83,6 +101,9 @@ defmodule FLHook.XMLText do
     %{xml_text | chardata: [xml_text.chardata, node]}
   end
 
+  @doc """
+  Converts the XML text struct to a string.
+  """
   @spec to_string(t) :: String.t()
   def to_string(%__MODULE__{} = xml_text) do
     IO.chardata_to_string(xml_text.chardata)

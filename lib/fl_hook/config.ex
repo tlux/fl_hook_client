@@ -1,4 +1,8 @@
 defmodule FLHook.Config do
+  @moduledoc """
+  A struct containing configuration for a client.
+  """
+
   alias FLHook.Codec
 
   defstruct [

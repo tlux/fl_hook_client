@@ -1,4 +1,8 @@
 defmodule FLHook.SocketError do
+  @moduledoc """
+  An error that indicates that the socket connection has a problem.
+  """
+
   defexception [:reason]
 
   @type t :: %__MODULE__{reason: :closed | :timeout | :inet.posix()}

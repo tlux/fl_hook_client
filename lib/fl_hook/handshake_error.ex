@@ -1,4 +1,9 @@
 defmodule FLHook.HandshakeError do
+  @moduledoc """
+  An error that indicates that the socket connection is not a valid FLHook
+  socket or the encoding is wrong.
+  """
+
   defexception [:actual_message]
 
   @impl true

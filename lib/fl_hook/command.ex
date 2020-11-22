@@ -1,4 +1,8 @@
 defmodule FLHook.Command do
+  @moduledoc """
+  A module providing helpers to serialize commands.
+  """
+
   alias FLHook.Dispatchable
   alias FLHook.Utils
 
