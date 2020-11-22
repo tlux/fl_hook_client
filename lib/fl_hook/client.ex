@@ -307,10 +307,8 @@ defmodule FLHook.Client do
   end
 
   defp handle_event(event, state) do
-    Logger.debug("[EVENT] #{inspect(event)}")
-
-    Enum.each(state.subscriptions, fn subscription ->
-      send(subscription.subscriber, event)
+    Enum.each(state.subscriptions, fn {subscriber, _monitor} ->
+      send(subscriber, event)
     end)
 
     {:noreply, state}
