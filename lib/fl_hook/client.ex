@@ -13,7 +13,6 @@ defmodule FLHook.Client do
   alias FLHook.ConfigError
   alias FLHook.Event
   alias FLHook.HandshakeError
-  alias FLHook.InvalidOperationError
   alias FLHook.Result
   alias FLHook.SocketError
   alias FLHook.Utils
@@ -24,29 +23,26 @@ defmodule FLHook.Client do
   @send_timeout 5000
   @welcome_msg "Welcome to FLHack"
 
+  @type client :: GenServer.server()
+
+  @type cmd_error :: CodecError.t() | CommandError.t() | SocketError.t()
+
   @callback start_link(opts :: Keyword.t()) :: GenServer.on_start()
 
   @callback stop(reason :: term) :: :ok
 
   @callback cmd(cmd :: Command.command()) ::
-              {:ok, Result.t()}
-              | {:error,
-                 CodecError.t()
-                 | CommandError.t()
-                 | InvalidOperationError.t()
-                 | SocketError.t()}
+              {:ok, Result.t()} | {:error, cmd_error}
 
   @callback cmd!(cmd :: Command.command()) :: Result.t() | no_return
 
-  @callback subscribe() :: :ok | {:error, InvalidOperationError.t()}
+  @callback subscribe() :: :ok
 
-  @callback subscribe(subscriber :: GenServer.server()) ::
-              :ok | {:error, InvalidOperationError.t()}
+  @callback subscribe(subscriber :: GenServer.server()) :: :ok
 
-  @callback unsubscribe() :: :ok | {:error, InvalidOperationError.t()}
+  @callback unsubscribe() :: :ok
 
-  @callback unsubscribe(subscriber :: GenServer.server()) ::
-              :ok | {:error, InvalidOperationError.t()}
+  @callback unsubscribe(subscriber :: GenServer.server()) :: :ok
 
   defmacro __using__(opts) do
     otp_app = Keyword.fetch!(opts, :otp_app)
@@ -130,23 +126,18 @@ defmodule FLHook.Client do
     Connection.start_link(__MODULE__, config, opts)
   end
 
-  @spec stop(GenServer.server(), term) :: :ok
+  @spec stop(client, term) :: :ok
   def stop(server, reason \\ :normal) do
     GenServer.stop(server, reason)
   end
 
-  @spec cmd(GenServer.server(), Command.command()) ::
-          {:ok, Result.t()}
-          | {:error,
-             CodecError.t()
-             | CommandError.t()
-             | InvalidOperationError.t()
-             | SocketError.t()}
+  @spec cmd(client, Command.command()) ::
+          {:ok, Result.t()} | {:error, cmd_error}
   def cmd(server, cmd) do
     Connection.call(server, {:cmd, Command.to_string(cmd)})
   end
 
-  @spec cmd!(GenServer.server(), Command.command()) :: Result.t() | no_return
+  @spec cmd!(client, Command.command()) :: Result.t() | no_return
   def cmd!(server, cmd) do
     case cmd(server, cmd) do
       {:ok, result} -> result
@@ -154,14 +145,12 @@ defmodule FLHook.Client do
     end
   end
 
-  @spec subscribe(GenServer.server(), GenServer.server()) ::
-          :ok | {:error, InvalidOperationError.t()}
+  @spec subscribe(client, GenServer.server()) :: :ok
   def subscribe(server, subscriber \\ self()) do
     Connection.call(server, {:subscribe, subscriber})
   end
 
-  @spec unsubscribe(GenServer.server(), GenServer.server()) ::
-          :ok | {:error, InvalidOperationError.t()}
+  @spec unsubscribe(client, GenServer.server()) :: :ok
   def unsubscribe(server, subscriber \\ self()) do
     Connection.call(server, {:unsubscribe, subscriber})
   end
@@ -183,13 +172,9 @@ defmodule FLHook.Client do
   def init(config) do
     if config.password do
       subscriptions =
-        if config.event_mode do
-          Map.new(config.subscribers, fn subscriber ->
-            {subscriber, Process.monitor(subscriber)}
-          end)
-        else
-          %{}
-        end
+        Map.new(config.subscribers, fn subscriber ->
+          {subscriber, Process.monitor(subscriber)}
+        end)
 
       {:connect, nil,
        %{
@@ -245,13 +230,6 @@ defmodule FLHook.Client do
     {:reply, {:error, %SocketError{reason: :closed}}, state}
   end
 
-  def handle_call({:cmd, _cmd}, _from, %{config: %{event_mode: true}} = state) do
-    {:reply,
-     {:error,
-      %InvalidOperationError{message: "Unable to run commands in event mode"}},
-     state}
-  end
-
   def handle_call({:cmd, cmd}, from, state) do
     case send_cmd(state.socket, state.config, cmd) do
       :ok ->
@@ -261,19 +239,6 @@ defmodule FLHook.Client do
       error ->
         {:reply, error, state}
     end
-  end
-
-  def handle_call(
-        {action, _subscriber},
-        _from,
-        %{config: %{event_mode: false}} = state
-      )
-      when action in [:subscribe, :unsubscribe] do
-    {:reply,
-     {:error,
-      %InvalidOperationError{
-        message: "Unable manage subscriptions when not in event mode"
-      }}, state}
   end
 
   def handle_call({:subscribe, subscriber}, _from, state) do
@@ -300,53 +265,17 @@ defmodule FLHook.Client do
   end
 
   @impl true
-  def handle_info({:tcp, socket, msg}, %{config: %{event_mode: true}} = state) do
-    state.config.inet_adapter.setopts(socket, active: :once)
-
-    case Codec.decode(state.config.codec, msg) do
-      {:ok, msg} ->
-        event = Event.parse(msg)
-
-        Logger.debug("[EVENT] #{inspect(event)}")
-
-        Enum.each(state.subscriptions, fn subscription ->
-          send(subscription.subscriber, event)
-        end)
-
-        {:noreply, state}
-
-      {:error, error} ->
-        log_error(error, state.config)
-        {:stop, error, state}
-    end
-  end
-
   def handle_info({:tcp, socket, msg}, state) do
     state.config.inet_adapter.setopts(socket, active: :once)
 
     case Codec.decode(state.config.codec, msg) do
       {:ok, msg} ->
-        {{:value, reply}, new_queue} = :queue.out(state.queue)
+        case Event.parse(msg) do
+          {:ok, event} ->
+            handle_event(event, state)
 
-        case Reply.add_chunk(reply, msg) do
-          %{status: :pending} = reply ->
-            {:noreply, %{state | queue: :queue.in_r(reply, new_queue)}}
-
-          %{status: :ok} = reply ->
-            GenServer.reply(
-              reply.client,
-              {:ok, Reply.to_result(reply)}
-            )
-
-            {:noreply, %{state | queue: new_queue}}
-
-          %{status: {:error, detail}} ->
-            GenServer.reply(
-              reply.client,
-              {:error, %CommandError{detail: detail}}
-            )
-
-            {:noreply, %{state | queue: new_queue}}
+          :error ->
+            handle_cmd_resp(msg, state)
         end
 
       {:error, error} ->
@@ -375,6 +304,41 @@ defmodule FLHook.Client do
       end
 
     {:noreply, %{state | subscriptions: subscriptions}}
+  end
+
+  defp handle_event(event, state) do
+    Logger.debug("[EVENT] #{inspect(event)}")
+
+    Enum.each(state.subscriptions, fn subscription ->
+      send(subscription.subscriber, event)
+    end)
+
+    {:noreply, state}
+  end
+
+  defp handle_cmd_resp(msg, state) do
+    {{:value, reply}, new_queue} = :queue.out(state.queue)
+
+    case Reply.add_chunk(reply, msg) do
+      %{status: :pending} = reply ->
+        {:noreply, %{state | queue: :queue.in_r(reply, new_queue)}}
+
+      %{status: :ok} = reply ->
+        GenServer.reply(
+          reply.client,
+          {:ok, Reply.to_result(reply)}
+        )
+
+        {:noreply, %{state | queue: new_queue}}
+
+      %{status: {:error, detail}} ->
+        GenServer.reply(
+          reply.client,
+          {:error, %CommandError{detail: detail}}
+        )
+
+        {:noreply, %{state | queue: new_queue}}
+    end
   end
 
   # Helpers

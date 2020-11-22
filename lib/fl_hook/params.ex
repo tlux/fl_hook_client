@@ -1,4 +1,8 @@
 defmodule FLHook.Params do
+  @moduledoc """
+  A module that provides helpers to decode command response and event params.
+  """
+
   alias FLHook.Utils
 
   @type params :: %{optional(String.t()) => String.t()}
