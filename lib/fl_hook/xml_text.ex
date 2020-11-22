@@ -76,6 +76,18 @@ defmodule FLHook.XMLText do
     %{xml_text | chardata: [xml_text.chardata, node]}
   end
 
+  @spec text(t, String.Chars.t()) :: t
+  def text(%__MODULE__{} = xml_text, text) do
+    text = text |> Kernel.to_string() |> Utils.map_chars(@char_map)
+    node = "<TEXT>#{text}</TEXT>"
+    %{xml_text | chardata: [xml_text.chardata, node]}
+  end
+
+  @spec to_string(t) :: String.t()
+  def to_string(%__MODULE__{} = xml_text) do
+    IO.chardata_to_string(xml_text.chardata)
+  end
+
   defp build_flags(flags) do
     flags
     |> List.wrap()
@@ -89,13 +101,6 @@ defmodule FLHook.XMLText do
       end
     end)
     |> to_hex()
-  end
-
-  @spec text(t, String.Chars.t()) :: t
-  def text(%__MODULE__{} = xml_text, text) do
-    text = text |> Kernel.to_string() |> Utils.map_chars(@char_map)
-    node = "<TEXT>#{text}</TEXT>"
-    %{xml_text | chardata: [xml_text.chardata, node]}
   end
 
   defp build_color(color) do
@@ -143,11 +148,6 @@ defmodule FLHook.XMLText do
     |> Integer.to_string(16)
     |> String.upcase()
     |> String.pad_leading(2, "0")
-  end
-
-  @spec to_string(t) :: String.t()
-  def to_string(%__MODULE__{} = xml_text) do
-    IO.chardata_to_string(xml_text.chardata)
   end
 
   defimpl String.Chars do
