@@ -1,5 +1,5 @@
 defmodule FLHook.ParamsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias FLHook.Params
 
