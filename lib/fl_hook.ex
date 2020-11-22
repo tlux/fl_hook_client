@@ -1,6 +1,15 @@
 defmodule FLHook do
   @moduledoc """
-  Documentation for `FLHook`.
+  [FLHook](https://github.com/DiscoveryGC/FLHook) is a community-managed tool
+  for managing
+  [Freelancer](https://en.wikipedia.org/wiki/Freelancer_(video_game)) game
+  servers. Freelancer is a pretty old game that has been released in 2003 by
+  Microsoft, but it still has a very committed community.
+
+  FLHook allows connecting via a socket to run commands on and receive events
+  from a Freelancer Server. This library provides an Elixir client for that
+  matter. You could use it to build web-based management interfaces or ingame
+  chat bots, for example.
   """
 
   alias FLHook.Client
