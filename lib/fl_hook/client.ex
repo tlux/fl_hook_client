@@ -245,7 +245,7 @@ defmodule FLHook.Client do
     {:reply, {:error, %SocketError{reason: :closed}}, state}
   end
 
-  def handle_call({:cmd, _cmd}, _from, %{event_mode: true} = state) do
+  def handle_call({:cmd, _cmd}, _from, %{config: %{event_mode: true}} = state) do
     {:reply,
      {:error,
       %InvalidOperationError{message: "Unable to run commands in event mode"}},
