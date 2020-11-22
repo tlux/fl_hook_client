@@ -8,8 +8,7 @@ defmodule FLHook.CodecErrorTest do
       assert Exception.message(%CodecError{
                direction: :decode,
                codec: :unicode,
-               value: "invalid",
-               reason: "Something went wrong"
+               value: "invalid"
              }) == "Unable to decode value in :unicode mode"
     end
 
@@ -17,8 +16,7 @@ defmodule FLHook.CodecErrorTest do
       assert Exception.message(%CodecError{
                direction: :encode,
                codec: :unicode,
-               value: "invalid",
-               reason: "Something went wrong"
+               value: "invalid"
              }) == "Unable to encode value in :unicode mode"
     end
   end
