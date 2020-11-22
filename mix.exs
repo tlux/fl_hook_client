@@ -3,7 +3,7 @@ defmodule FLHook.MixProject do
 
   def project do
     [
-      app: :flhook_client,
+      app: :fl_hook_client,
       version: "0.1.0",
       elixir: "~> 1.8",
       start_permanent: Mix.env() == :prod,
@@ -45,7 +45,7 @@ defmodule FLHook.MixProject do
     [
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/tlux/flhook_client"
+        "GitHub" => "https://github.com/tlux/fl_hook_client"
       }
     ]
   end

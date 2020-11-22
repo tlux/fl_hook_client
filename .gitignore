@@ -20,7 +20,7 @@ erl_crash.dump
 *.ez
 
 # Ignore package tarball (built via "mix hex.build").
-flhook_client-*.tar
+fl_hook_client-*.tar
 
 /.vscode
 .DS_Store

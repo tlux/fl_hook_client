@@ -1,3 +1,3 @@
 import Config
 
-config :flhook_client, FLHook.TestClient, password: "Test1234"
+config :fl_hook_client, FLHook.TestClient, password: "Test1234"

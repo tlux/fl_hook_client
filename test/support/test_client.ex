@@ -1,3 +1,3 @@
 defmodule FLHook.TestClient do
-  use FLHook.Client, otp_app: :flhook_client
+  use FLHook.Client, otp_app: :fl_hook_client
 end
