@@ -315,27 +315,32 @@ defmodule FLHook.Client do
   end
 
   defp handle_cmd_resp(msg, state) do
-    {{:value, reply}, new_queue} = :queue.out(state.queue)
+    case :queue.out(state.queue) do
+      {{:value, reply}, new_queue} ->
+        case Reply.add_chunk(reply, msg) do
+          %{status: :pending} = reply ->
+            {:noreply, %{state | queue: :queue.in_r(reply, new_queue)}}
 
-    case Reply.add_chunk(reply, msg) do
-      %{status: :pending} = reply ->
-        {:noreply, %{state | queue: :queue.in_r(reply, new_queue)}}
+          %{status: :ok} = reply ->
+            GenServer.reply(
+              reply.client,
+              {:ok, Reply.to_result(reply)}
+            )
 
-      %{status: :ok} = reply ->
-        GenServer.reply(
-          reply.client,
-          {:ok, Reply.to_result(reply)}
-        )
+            {:noreply, %{state | queue: new_queue}}
 
-        {:noreply, %{state | queue: new_queue}}
+          %{status: {:error, detail}} ->
+            GenServer.reply(
+              reply.client,
+              {:error, %CommandError{detail: detail}}
+            )
 
-      %{status: {:error, detail}} ->
-        GenServer.reply(
-          reply.client,
-          {:error, %CommandError{detail: detail}}
-        )
+            {:noreply, %{state | queue: new_queue}}
+        end
 
-        {:noreply, %{state | queue: new_queue}}
+      {:empty, _queue} ->
+        # should never happen
+        {:noreply, state}
     end
   end
 
