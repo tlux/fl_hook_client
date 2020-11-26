@@ -45,6 +45,10 @@ defmodule FLHook.Params do
     Map.fetch!(params, key)
   end
 
+  def boolean!(params, key) do
+    string!(params, key) in ["1", "enabled"]
+  end
+
   @doc """
   Gets the integer at the given key from the params.
   """
