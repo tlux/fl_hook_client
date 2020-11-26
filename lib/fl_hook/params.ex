@@ -37,6 +37,10 @@ defmodule FLHook.Params do
   @spec fetch(params, key, param_type) :: {:ok, any} | :error
   def fetch(params, key, type \\ :string)
 
+  def fetch(params, key, type) when is_atom(key) do
+    fetch(params, Atom.to_string(key), type)
+  end
+
   def fetch(params, key, :boolean) do
     with {:ok, value} <- fetch(params, key) do
       {:ok, value in ["1", "enabled"]}
