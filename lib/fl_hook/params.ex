@@ -6,8 +6,11 @@ defmodule FLHook.Params do
   alias FLHook.Utils
 
   @type key :: atom | String.t()
+
   @type params :: %{optional(String.t()) => String.t()}
-  @type param_type :: :boolean | :duration | :integer | :float | :string
+
+  @type param_type ::
+          :boolean | :duration | :integer | :float | :string | module
 
   @doc false
   @spec parse(String.t(), Keyword.t()) :: params
@@ -80,6 +83,17 @@ defmodule FLHook.Params do
 
   def fetch(params, key, :string) do
     Map.fetch(params, key)
+  end
+
+  def fetch(params, key, type_mod) when is_atom(type_mod) do
+    if function_exported?(type_mod, :parse, 1) do
+      with {:ok, value} <- fetch(params, key),
+           {:ok, value} <- type_mod.parse(value) do
+        {:ok, value}
+      end
+    else
+      :error
+    end
   end
 
   @spec fetch!(params, key, param_type) :: any | no_return
