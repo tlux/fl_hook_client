@@ -5,6 +5,7 @@ defmodule FLHook.Params do
 
   alias FLHook.Utils
 
+  @type key :: atom | String.t()
   @type params :: %{optional(String.t()) => String.t()}
 
   @doc false
@@ -30,5 +31,60 @@ defmodule FLHook.Params do
         end
       end
     )
+  end
+
+  @doc """
+  Gets the string at the given key from the params.
+  """
+  @spec string!(params, key) :: String.t()
+  def string!(params, key) when is_atom(key) do
+    string!(params, Atom.to_string(key))
+  end
+
+  def string!(params, key) when is_binary(key) do
+    Map.fetch!(params, key)
+  end
+
+  @doc """
+  Gets the integer at the given key from the params.
+  """
+  @spec integer!(params, key) :: integer
+  def integer!(params, key) do
+    params
+    |> string!(key)
+    |> String.to_integer()
+  end
+
+  @doc """
+  Gets the float at the given key from the params.
+  """
+  @spec float!(params, key) :: float
+  def float!(params, key) do
+    params
+    |> string!(key)
+    |> String.to_float()
+  end
+
+  @doc """
+  Gets the duration at the given key from the params.
+  """
+  @spec duration!(params, key) :: %{
+          days: non_neg_integer,
+          hours: non_neg_integer,
+          minutes: non_neg_integer,
+          seconds: non_neg_integer
+        }
+  def duration!(params, key) do
+    params
+    |> string!(key)
+    |> String.split(":")
+    |> Enum.map(&String.to_integer/1)
+    |> case do
+      [days, hours, minutes, seconds] ->
+        %{days: days, hours: hours, minutes: minutes, seconds: seconds}
+
+      _ ->
+        raise ArgumentError, "invalid duration"
+    end
   end
 end
