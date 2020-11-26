@@ -7,6 +7,7 @@ defmodule FLHook.Params do
 
   @type key :: atom | String.t()
   @type params :: %{optional(String.t()) => String.t()}
+  @type param_type :: :boolean | :duration | :integer | :float | :string
 
   @doc false
   @spec parse(String.t(), Keyword.t()) :: params
@@ -33,62 +34,55 @@ defmodule FLHook.Params do
     )
   end
 
-  @doc """
-  Gets the string at the given key from the params.
-  """
-  @spec string!(params, key) :: String.t()
-  def string!(params, key) when is_atom(key) do
-    string!(params, Atom.to_string(key))
+  @spec fetch(params, key, param_type) :: {:ok, any} | :error
+  def fetch(params, key, type \\ :string)
+
+  def fetch(params, key, :boolean) do
+    with {:ok, value} <- fetch(params, key) do
+      {:ok, value in ["1", "enabled"]}
+    end
   end
 
-  def string!(params, key) when is_binary(key) do
-    Map.fetch!(params, key)
+  def fetch(params, key, :duration) do
+    with {:ok, value} <- fetch(params, key),
+         [days, hours, minutes, seconds] <- String.split(value, ":", parts: 4),
+         {days, ""} <- Integer.parse(days),
+         {hours, ""} <- Integer.parse(hours),
+         {minutes, ""} <- Integer.parse(minutes),
+         {seconds, ""} <- Integer.parse(seconds) do
+      {:ok, %{days: days, hours: hours, minutes: minutes, seconds: seconds}}
+    else
+      _ -> :error
+    end
   end
 
-  def boolean!(params, key) do
-    string!(params, key) in ["1", "enabled"]
+  def fetch(params, key, :float) do
+    with {:ok, value} <- fetch(params, key),
+         {value, ""} <- Float.parse(value) do
+      {:ok, value}
+    else
+      _ -> :error
+    end
   end
 
-  @doc """
-  Gets the integer at the given key from the params.
-  """
-  @spec integer!(params, key) :: integer
-  def integer!(params, key) do
-    params
-    |> string!(key)
-    |> String.to_integer()
+  def fetch(params, key, :integer) do
+    with {:ok, value} <- fetch(params, key),
+         {value, ""} <- Integer.parse(value) do
+      {:ok, value}
+    else
+      _ -> :error
+    end
   end
 
-  @doc """
-  Gets the float at the given key from the params.
-  """
-  @spec float!(params, key) :: float
-  def float!(params, key) do
-    params
-    |> string!(key)
-    |> String.to_float()
+  def fetch(params, key, :string) do
+    Map.fetch(params, key)
   end
 
-  @doc """
-  Gets the duration at the given key from the params.
-  """
-  @spec duration!(params, key) :: %{
-          days: non_neg_integer,
-          hours: non_neg_integer,
-          minutes: non_neg_integer,
-          seconds: non_neg_integer
-        }
-  def duration!(params, key) do
-    params
-    |> string!(key)
-    |> String.split(":")
-    |> Enum.map(&String.to_integer/1)
-    |> case do
-      [days, hours, minutes, seconds] ->
-        %{days: days, hours: hours, minutes: minutes, seconds: seconds}
-
-      _ ->
-        raise ArgumentError, "invalid duration"
+  @spec fetch!(params, key, param_type) :: any | no_return
+  def fetch!(params, key, type \\ :string) do
+    case fetch(params, key, type) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "invalid or missing param (#{key})"
     end
   end
 end
