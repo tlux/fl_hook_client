@@ -46,7 +46,7 @@ defmodule FLHook.Params do
 
   def fetch(params, key, :boolean) do
     with {:ok, value} <- fetch(params, key) do
-      {:ok, value in ["1", "enabled"]}
+      {:ok, value in ["1", "yes", "enabled"]}
     end
   end
 
