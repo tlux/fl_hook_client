@@ -47,6 +47,25 @@ defmodule FLHook.ResultTest do
     end
   end
 
+  describe "file_stream!/1" do
+    test "decodes the lines as file contents" do
+      result = %Result{
+        lines: ["l line 1", "l line 2", "l ", "l line 3"]
+      }
+
+      assert result |> Result.file_stream!() |> Enum.to_list() ==
+               ["line 1", "line 2", "", "line 3"]
+    end
+
+    test "raises argument error when result is not a file" do
+      assert_raise ArgumentError, "result is not a file", fn ->
+        @params_result
+        |> Result.file_stream!()
+        |> Stream.run()
+      end
+    end
+  end
+
   describe "file!/1" do
     test "decodes the lines as file contents" do
       assert Result.file!(%Result{

@@ -7,11 +7,15 @@ defmodule FLHook.Config do
 
   defstruct [
     :password,
+    backoff_interval: 1000,
     codec: :unicode,
+    connect_timeout: 5000,
     event_mode: false,
+    handshake_recv_timeout: 5000,
     host: "localhost",
     inet_adapter: :inet,
     port: 1920,
+    send_timeout: 5000,
     subscribers: [],
     tcp_adapter: :gen_tcp
   ]

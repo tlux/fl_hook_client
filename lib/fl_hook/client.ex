@@ -17,10 +17,6 @@ defmodule FLHook.Client do
   alias FLHook.SocketError
   alias FLHook.Utils
 
-  @backoff_timeout 1000
-  @connect_timeout 5000
-  @passive_recv_timeout 5000
-  @send_timeout 5000
   @welcome_msg "Welcome to FLHack"
 
   @type client :: GenServer.server()
@@ -205,7 +201,7 @@ defmodule FLHook.Client do
 
       {:error, error} ->
         log_error(error, config)
-        {:backoff, @backoff_timeout, state}
+        {:backoff, config.backoff_interval, state}
     end
   end
 
@@ -351,8 +347,8 @@ defmodule FLHook.Client do
            config.tcp_adapter.connect(
              to_charlist(config.host),
              config.port,
-             [:binary, active: false, send_timeout: @send_timeout],
-             @connect_timeout
+             [:binary, active: false, send_timeout: config.send_timeout],
+             config.connect_timeout
            ) do
       {:error, %SocketError{reason: reason}}
     end
@@ -360,7 +356,8 @@ defmodule FLHook.Client do
 
   defp read_chunk(socket, config) do
     with {:socket, {:ok, value}} <-
-           {:socket, config.tcp_adapter.recv(socket, 0, @passive_recv_timeout)},
+           {:socket,
+            config.tcp_adapter.recv(socket, 0, config.handshake_recv_timeout)},
          {:codec, {:ok, decoded}} <- {:codec, Codec.decode(config.codec, value)} do
       {:ok, decoded}
     else

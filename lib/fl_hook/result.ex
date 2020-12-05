@@ -40,15 +40,23 @@ defmodule FLHook.Result do
   end
 
   @doc """
+  Converts the result to a file stream. May raise when the result is no file.
+  """
+  @spec file_stream!(t) :: Enum.t() | no_return
+  def file_stream!(%__MODULE__{} = result) do
+    Stream.map(result.lines, fn
+      "l " <> line -> line
+      _ -> raise ArgumentError, "result is not a file"
+    end)
+  end
+
+  @doc """
   Converts the result to a file string. May raise when the result is no file.
   """
   @spec file!(t) :: String.t() | no_return
   def file!(%__MODULE__{} = result) do
-    result.lines
-    |> Stream.map(fn
-      "l " <> line -> line
-      _ -> raise ArgumentError, "result is not a file"
-    end)
+    result
+    |> file_stream!()
     |> Enum.join(Utils.line_sep())
   end
 
