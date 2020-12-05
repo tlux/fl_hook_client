@@ -37,6 +37,7 @@ defmodule FLHook.MixProject do
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.13", only: :test},
       {:ex_doc, "~> 0.23", only: :dev},
+      {:liveness, "~> 1.0", only: :test},
       {:mox, "~> 1.0", only: :test}
     ]
   end
