@@ -48,4 +48,44 @@ defmodule FLHook.ParamsTest do
       assert Params.parse("Hello World", spread: "text") == %{}
     end
   end
+
+  describe "fetch/2" do
+    test "delegates to fetch/3 with string type"
+  end
+
+  describe "fetch/3" do
+    test "boolean"
+
+    test "duration"
+
+    test "float"
+
+    test "integer"
+
+    test "string"
+
+    test "error when param missing"
+
+    test "error when param invalid"
+  end
+
+  describe "fetch!/2" do
+    test "delegates to fetch!/3 with string type"
+  end
+
+  describe "fetch!/3" do
+    test "boolean"
+
+    test "duration"
+
+    test "float"
+
+    test "integer"
+
+    test "string"
+
+    test "raise when param missing"
+
+    test "raise when param invalid"
+  end
 end
