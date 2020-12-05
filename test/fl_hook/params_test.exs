@@ -50,42 +50,110 @@ defmodule FLHook.ParamsTest do
   end
 
   describe "fetch/2" do
-    test "delegates to fetch/3 with string type"
+    test "delegates to fetch/3 with string type" do
+      params = %{"foo" => "bar"}
+
+      assert Params.fetch(params, "foo") == Params.fetch(params, "foo", :string)
+    end
   end
 
   describe "fetch/3" do
-    test "boolean"
+    test "boolean" do
+      assert Params.fetch(%{"foo" => "1"}, "foo", :boolean) == {:ok, true}
+      assert Params.fetch(%{"foo" => "enabled"}, "foo", :boolean) == {:ok, true}
+      assert Params.fetch(%{"foo" => "yes"}, "foo", :boolean) == {:ok, true}
+      assert Params.fetch(%{"foo" => "yes"}, :foo, :boolean) == {:ok, true}
+      assert Params.fetch(%{"foo" => "0"}, "foo", :boolean) == {:ok, false}
+      assert Params.fetch(%{"foo" => "no"}, "foo", :boolean) == {:ok, false}
+    end
 
-    test "duration"
+    test "duration" do
+      assert Params.fetch(%{"foo" => "1:23:45:56"}, "foo", :duration) ==
+               {:ok, %{days: 1, hours: 23, minutes: 45, seconds: 56}}
 
-    test "float"
+      assert Params.fetch(%{"foo" => "1:45:56"}, "foo", :duration) == :error
+    end
 
-    test "integer"
+    test "float" do
+      assert Params.fetch(%{"foo" => "1.2"}, "foo", :float) == {:ok, 1.2}
+      assert Params.fetch(%{"foo" => "1.0"}, "foo", :float) == {:ok, 1.0}
+      assert Params.fetch(%{"foo" => "1"}, "foo", :float) == {:ok, 1.0}
+      assert Params.fetch(%{"foo" => "bar"}, "foo", :float) == :error
+    end
 
-    test "string"
+    test "integer" do
+      assert Params.fetch(%{"foo" => "2"}, "foo", :integer) == {:ok, 2}
+      assert Params.fetch(%{"foo" => "bar"}, "foo", :integer) == :error
+      assert Params.fetch(%{"foo" => "2.2"}, "foo", :integer) == :error
+    end
 
-    test "error when param missing"
+    test "string" do
+      assert Params.fetch(%{"foo" => "bar"}, "foo", :string) == {:ok, "bar"}
+    end
 
-    test "error when param invalid"
+    test "error when param missing" do
+      assert Params.fetch(%{}, "foo", :string) == :error
+    end
   end
 
   describe "fetch!/2" do
-    test "delegates to fetch!/3 with string type"
+    test "delegates to fetch!/3 with string type" do
+      params = %{"foo" => "bar"}
+
+      assert Params.fetch!(params, "foo") ==
+               Params.fetch!(params, "foo", :string)
+    end
   end
 
   describe "fetch!/3" do
-    test "boolean"
+    test "boolean" do
+      assert Params.fetch!(%{"foo" => "1"}, "foo", :boolean) == true
+      assert Params.fetch!(%{"foo" => "enabled"}, "foo", :boolean) == true
+      assert Params.fetch!(%{"foo" => "yes"}, "foo", :boolean) == true
+      assert Params.fetch!(%{"foo" => "yes"}, :foo, :boolean) == true
+      assert Params.fetch!(%{"foo" => "0"}, "foo", :boolean) == false
+      assert Params.fetch!(%{"foo" => "no"}, "foo", :boolean) == false
+    end
 
-    test "duration"
+    test "duration" do
+      assert Params.fetch!(%{"foo" => "1:23:45:56"}, "foo", :duration) ==
+               %{days: 1, hours: 23, minutes: 45, seconds: 56}
 
-    test "float"
+      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+        Params.fetch!(%{"foo" => "1:45:56"}, "foo", :duration)
+      end
+    end
 
-    test "integer"
+    test "float" do
+      assert Params.fetch!(%{"foo" => "1.2"}, "foo", :float) == 1.2
+      assert Params.fetch!(%{"foo" => "1.0"}, "foo", :float) == 1.0
+      assert Params.fetch!(%{"foo" => "1"}, "foo", :float) == 1.0
 
-    test "string"
+      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+        Params.fetch!(%{"foo" => "bar"}, "foo", :float)
+      end
+    end
 
-    test "raise when param missing"
+    test "integer" do
+      assert Params.fetch!(%{"foo" => "2"}, "foo", :integer) == 2
 
-    test "raise when param invalid"
+      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+        Params.fetch!(%{"foo" => "bar"}, "foo", :integer) == :error
+      end
+
+      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+        Params.fetch!(%{"foo" => "2.2"}, "foo", :integer) == :error
+      end
+    end
+
+    test "string" do
+      assert Params.fetch!(%{"foo" => "bar"}, "foo", :string) == "bar"
+    end
+
+    test "raise when param missing" do
+      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+        Params.fetch!(%{}, "foo", :string)
+      end
+    end
   end
 end
