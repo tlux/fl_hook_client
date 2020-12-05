@@ -86,7 +86,7 @@ defmodule FLHook.Params do
   end
 
   def fetch(params, key, type_mod) when is_atom(type_mod) do
-    if function_exported?(type_mod, :parse, 1) do
+    if Code.ensure_loaded?(type_mod) && function_exported?(type_mod, :parse, 1) do
       with {:ok, value} <- fetch(params, key),
            {:ok, value} <- type_mod.parse(value) do
         {:ok, value}

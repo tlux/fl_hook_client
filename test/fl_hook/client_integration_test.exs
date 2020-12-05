@@ -9,7 +9,7 @@ defmodule FLHook.ClientIntegrationTest do
   @moduletag :integration
 
   test "send command" do
-    client = valid_client()
+    client = start_client!()
 
     assert {:ok, %Result{} = result} = Client.cmd(client, "serverinfo")
     assert %{"uptime" => _} = Result.params(result)
@@ -18,7 +18,7 @@ defmodule FLHook.ClientIntegrationTest do
   end
 
   test "command error" do
-    client = valid_client()
+    client = start_client!()
 
     assert {:error, %CommandError{} = error} = Client.cmd(client, "invalid")
     assert Exception.message(error) == "Command error: Invalid command"
@@ -31,7 +31,7 @@ defmodule FLHook.ClientIntegrationTest do
              {:error, %SocketError{reason: :closed}}
   end
 
-  defp valid_client do
+  defp start_client! do
     start_supervised!(
       {Client,
        host: System.fetch_env!("FLHOOK_HOST"),

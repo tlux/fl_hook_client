@@ -91,6 +91,13 @@ defmodule FLHook.ParamsTest do
       assert Params.fetch(%{"foo" => "bar"}, "foo", :string) == {:ok, "bar"}
     end
 
+    test "custom type" do
+      assert Params.fetch(%{"foo" => "bar"}, "foo", FLHook.ParamsParser) ==
+               {:ok, "BAR"}
+
+      assert Params.fetch(%{"foo" => "bar"}, "foo", :invalid_parser) == :error
+    end
+
     test "error when param missing" do
       assert Params.fetch(%{}, "foo", :string) == :error
     end
@@ -148,6 +155,15 @@ defmodule FLHook.ParamsTest do
 
     test "string" do
       assert Params.fetch!(%{"foo" => "bar"}, "foo", :string) == "bar"
+    end
+
+    test "custom type" do
+      assert Params.fetch!(%{"foo" => "bar"}, "foo", FLHook.ParamsParser) ==
+               "BAR"
+
+      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+        Params.fetch!(%{"foo" => "bar"}, "foo", :invalid_parser) == :error
+      end
     end
 
     test "raise when param missing" do
