@@ -47,14 +47,6 @@ defmodule FLHook.XMLText do
           | :small
 
   @doc """
-  Creates a new XML text struct without any content.
-  """
-  @spec new() :: t
-  def new do
-    %__MODULE__{}
-  end
-
-  @doc """
   Creates a new XML text struct with the specified content.
   """
   @spec new([
@@ -63,7 +55,7 @@ defmodule FLHook.XMLText do
           | {:text, String.Chars.t()}
           | String.Chars.t()
         ]) :: t
-  def new(nodes) do
+  def new(nodes \\ []) do
     Enum.reduce(nodes, %__MODULE__{}, fn
       {:format, color}, xml_text ->
         format(xml_text, color)
