@@ -261,6 +261,13 @@ defmodule FLHook.Client do
   end
 
   @impl true
+  def terminate(_reason, state) do
+    if state.socket do
+      :ok = state.config.tcp_adapter.close(state.socket)
+    end
+  end
+
+  @impl true
   def handle_call(:connected?, _from, state) do
     {:reply, !is_nil(state.socket), state}
   end
