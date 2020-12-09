@@ -39,9 +39,9 @@ defmodule FLHook.Client do
   @callback start_link(opts :: Keyword.t()) :: GenServer.on_start()
 
   @doc """
-  Stops the client.
+  Closes the connection to the FLHook socket.
   """
-  @callback stop(reason :: term) :: :ok
+  @callback close() :: :ok
 
   @doc """
   Sends a command to the server and returns the result.
@@ -106,8 +106,8 @@ defmodule FLHook.Client do
       end
 
       @impl Client
-      def stop(reason \\ :normal) do
-        Client.stop(__MODULE__, reason)
+      def close do
+        Client.close(__MODULE__)
       end
 
       @impl Client
@@ -158,33 +158,38 @@ defmodule FLHook.Client do
     Connection.start_link(__MODULE__, config, opts)
   end
 
-  @spec stop(client, term) :: :ok
-  def stop(server, reason \\ :normal) do
-    GenServer.stop(server, reason)
+  @spec close(client) :: :ok
+  def close(client) do
+    Connection.call(client, :close)
+  end
+
+  @spec connected?(client) :: boolean
+  def connected?(client) do
+    Connection.call(client, :connected?)
   end
 
   @spec cmd(client, Command.command()) ::
           {:ok, Result.t()} | {:error, cmd_error}
-  def cmd(server, cmd) do
-    Connection.call(server, {:cmd, Command.to_string(cmd)})
+  def cmd(client, cmd) do
+    Connection.call(client, {:cmd, Command.to_string(cmd)})
   end
 
   @spec cmd!(client, Command.command()) :: Result.t() | no_return
-  def cmd!(server, cmd) do
-    case cmd(server, cmd) do
+  def cmd!(client, cmd) do
+    case cmd(client, cmd) do
       {:ok, result} -> result
       {:error, error} -> raise error
     end
   end
 
   @spec subscribe(client, GenServer.server()) :: :ok
-  def subscribe(server, subscriber \\ self()) do
-    Connection.call(server, {:subscribe, subscriber})
+  def subscribe(client, subscriber \\ self()) do
+    Connection.call(client, {:subscribe, subscriber})
   end
 
   @spec unsubscribe(client, GenServer.server()) :: :ok
-  def unsubscribe(server, subscriber \\ self()) do
-    Connection.call(server, {:unsubscribe, subscriber})
+  def unsubscribe(client, subscriber \\ self()) do
+    Connection.call(client, {:unsubscribe, subscriber})
   end
 
   # Child Spec
@@ -233,22 +238,37 @@ defmodule FLHook.Client do
   end
 
   @impl true
-  def disconnect(_info, state) do
+  def disconnect(info, state) do
     if state.socket do
       :ok = state.config.tcp_adapter.close(state.socket)
     end
 
-    {:connect, :reconnect, %{state | socket: nil}}
-  end
+    state = %{state | socket: nil}
 
-  @impl true
-  def terminate(_reason, state) do
-    if state.socket do
-      state.config.tcp_adapter.close(state.socket)
+    case info do
+      {:close, from} ->
+        Connection.reply(from, :ok)
+        {:connect, :reconnect, state}
+
+      %HandshakeError{} = error ->
+        log_error(error, state.config)
+        {:stop, error, state}
+
+      error ->
+        log_error(error, state.config)
+        {:connect, :reconnect, state}
     end
   end
 
   @impl true
+  def handle_call(:connected?, _from, state) do
+    {:reply, !is_nil(state.socket), state}
+  end
+
+  def handle_call(:close, from, state) do
+    {:disconnect, {:close, from}, state}
+  end
+
   def handle_call({:cmd, _cmd}, _from, %{socket: nil} = state) do
     {:reply, {:error, %SocketError{reason: :closed}}, state}
   end
@@ -308,15 +328,11 @@ defmodule FLHook.Client do
   end
 
   def handle_info({:tcp_closed, _socket}, state) do
-    error = %SocketError{reason: :closed}
-    log_error(error, state.config)
-    {:disconnect, error, state}
+    {:disconnect, %SocketError{reason: :closed}, state}
   end
 
   def handle_info({:tcp_error, _socket, reason}, state) do
-    error = %SocketError{reason: reason}
-    log_error(error, state.config)
-    {:disconnect, error, state}
+    {:disconnect, %SocketError{reason: reason}, state}
   end
 
   def handle_info({:DOWN, monitor_ref, :process, subscriber, _info}, state) do
@@ -353,7 +369,7 @@ defmodule FLHook.Client do
             {:noreply, %{state | queue: new_queue}}
 
           %{status: {:error, detail}} ->
-            GenServer.reply(
+            Connection.reply(
               reply.client,
               {:error, %CommandError{detail: detail}}
             )
@@ -390,8 +406,9 @@ defmodule FLHook.Client do
       {:ok, state}
     else
       {:error, error} ->
+        state.config.tcp_adapter.close(state.socket)
         log_error(error, state.config)
-        {:stop, error, state}
+        {:stop, error, %{state | socket: nil}}
     end
   end
 

@@ -12,7 +12,6 @@ defmodule FLHook.ClientTest do
   alias FLHook.MockTCPAdapter
 
   setup :set_mox_global
-  setup :verify_on_exit!
 
   describe "start_link/1" do
     setup do
@@ -67,9 +66,9 @@ defmodule FLHook.ClientTest do
 
       client = start_supervised!({Client, config})
 
-      assert eventually(fn ->
-               :sys.get_state(client).mod_state.socket == fake_socket
-             end)
+      # Check state
+      assert eventually(fn -> verify!() end)
+      assert :sys.get_state(client).mod_state.socket == fake_socket
     end
 
     test "connect with event mode", %{config: config} do
@@ -114,9 +113,8 @@ defmodule FLHook.ClientTest do
 
       client = start_supervised!({Client, config})
 
-      assert eventually(fn ->
-               :sys.get_state(client).mod_state.socket == fake_socket
-             end)
+      assert eventually(fn -> verify!() end)
+      assert :sys.get_state(client).mod_state.socket == fake_socket
     end
 
     test "connect error", %{config: config} do
@@ -127,7 +125,8 @@ defmodule FLHook.ClientTest do
       assert capture_log(fn ->
                client = start_supervised!({Client, config})
 
-               :sys.get_state(client).mod_state.socket == nil
+               eventually(fn -> verify!() end)
+               eventually(fn -> !Client.connected?(client) end)
              end) =~ "Socket error: connection refused"
     end
 
@@ -148,14 +147,13 @@ defmodule FLHook.ClientTest do
       assert capture_log(fn ->
                client = start_supervised!({Client, config})
 
-               eventually(fn ->
-                 !Process.alive?(client)
-               end)
+               eventually(fn -> verify!() end)
+               eventually(fn -> !Process.alive?(client) end)
              end) =~ "Socket is not a valid FLHook socket"
     end
 
-    test "auth error"
+    # test "auth error"
 
-    test "event mode error"
+    # test "event mode error"
   end
 end
