@@ -248,16 +248,12 @@ defmodule FLHook.Client do
     case info do
       {:close, from} ->
         Connection.reply(from, :ok)
-        {:connect, :reconnect, state}
-
-      %HandshakeError{} = error ->
-        log_error(error, state.config)
-        {:stop, error, state}
 
       error ->
         log_error(error, state.config)
-        {:connect, :reconnect, state}
     end
+
+    {:connect, :reconnect, state}
   end
 
   @impl true
