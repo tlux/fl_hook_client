@@ -1,4 +1,8 @@
 defmodule FLHook.Client do
+  @moduledoc """
+  A GenServer that connects to a FLHook socket.
+  """
+
   use Connection
 
   require Logger
@@ -19,25 +23,57 @@ defmodule FLHook.Client do
 
   @welcome_msg "Welcome to FLHack"
 
+  @typedoc """
+  Type representing a FLHook client process.
+  """
   @type client :: GenServer.server()
 
+  @typedoc """
+  Type describing an error that occurs when a command fails.
+  """
   @type cmd_error :: CodecError.t() | CommandError.t() | SocketError.t()
 
+  @doc """
+  Connects to a FLHook socket.
+  """
   @callback start_link(opts :: Keyword.t()) :: GenServer.on_start()
 
+  @doc """
+  Stops the client.
+  """
   @callback stop(reason :: term) :: :ok
 
+  @doc """
+  Sends a command to the server and returns the result.
+  """
   @callback cmd(cmd :: Command.command()) ::
               {:ok, Result.t()} | {:error, cmd_error}
 
+  @doc """
+  Sends a command to the server and returns the result. Raises when the command
+  fails.
+  """
   @callback cmd!(cmd :: Command.command()) :: Result.t() | no_return
 
+  @doc """
+  Lets the current process subscribe to events emitted by the FLHook client.
+  """
   @callback subscribe() :: :ok
 
+  @doc """
+  Lets the specified process subscribe to events emitted by the FLHook client.
+  """
   @callback subscribe(subscriber :: GenServer.server()) :: :ok
 
+  @doc """
+  Lets the current process unsubscribe from events emitted by the FLHook client.
+  """
   @callback unsubscribe() :: :ok
 
+  @doc """
+  Lets the specified process unsubscribe from events emitted by the FLHook
+  client.
+  """
   @callback unsubscribe(subscriber :: GenServer.server()) :: :ok
 
   defmacro __using__(opts) do
@@ -186,18 +222,9 @@ defmodule FLHook.Client do
 
   @impl true
   def connect(_info, %{config: config} = state) do
-    with {:ok, socket} <- socket_connect(config),
-         :ok <- verify_welcome_msg(socket, config),
-         :ok <- authenticate(socket, config),
-         :ok <- event_mode(socket, config) do
-      :ok = config.tcp_adapter.controlling_process(socket, self())
-      config.inet_adapter.setopts(socket, active: :once)
-      {:ok, %{state | socket: socket}}
-    else
-      {:error, %error_struct{} = error}
-      when error_struct in [CommandError, HandshakeError] ->
-        log_error(error, config)
-        {:stop, error, state}
+    case socket_connect(config) do
+      {:ok, socket} ->
+        after_connect(%{state | socket: socket})
 
       {:error, error} ->
         log_error(error, config)
@@ -354,6 +381,20 @@ defmodule FLHook.Client do
     end
   end
 
+  defp after_connect(state) do
+    with :ok <- verify_welcome_msg(state),
+         :ok <- authenticate(state),
+         :ok <- event_mode(state) do
+      :ok = state.config.tcp_adapter.controlling_process(state.socket, self())
+      state.config.inet_adapter.setopts(state.socket, active: :once)
+      {:ok, state}
+    else
+      {:error, error} ->
+        log_error(error, state.config)
+        {:stop, error, state}
+    end
+  end
+
   defp read_chunk(socket, config) do
     with {:socket, {:ok, value}} <-
            {:socket,
@@ -411,24 +452,29 @@ defmodule FLHook.Client do
     end
   end
 
-  defp verify_welcome_msg(socket, config) do
-    case read_chunk(socket, config) do
+  defp verify_welcome_msg(state) do
+    case read_chunk(state.socket, state.config) do
       {:ok, @welcome_msg <> _} -> :ok
       {:ok, message} -> {:error, %HandshakeError{actual_message: message}}
       error -> error
     end
   end
 
-  defp authenticate(socket, config) do
-    with {:ok, _} <- cmd_passive(socket, config, {"pass", [config.password]}) do
+  defp authenticate(state) do
+    with {:ok, _} <-
+           cmd_passive(
+             state.socket,
+             state.config,
+             {"pass", [state.config.password]}
+           ) do
       :ok
     end
   end
 
-  defp event_mode(_socket, %{event_mode: false}), do: :ok
+  defp event_mode(%{config: %{event_mode: false}}), do: :ok
 
-  defp event_mode(socket, config) do
-    with {:ok, _} <- cmd_passive(socket, config, "eventmode") do
+  defp event_mode(state) do
+    with {:ok, _} <- cmd_passive(state.socket, state.config, "eventmode") do
       :ok
     end
   end

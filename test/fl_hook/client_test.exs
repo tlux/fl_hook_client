@@ -1,6 +1,7 @@
 defmodule FLHook.ClientTest do
   use ExUnit.Case
 
+  import ExUnit.CaptureLog
   import Liveness
   import Mox
 
@@ -118,9 +119,40 @@ defmodule FLHook.ClientTest do
              end)
     end
 
-    test "connect error"
+    test "connect error", %{config: config} do
+      expect(MockTCPAdapter, :connect, fn _, _, _, _ ->
+        {:error, :econnrefused}
+      end)
 
-    test "handshake error"
+      assert capture_log(fn ->
+               client = start_supervised!({Client, config})
+
+               :sys.get_state(client).mod_state.socket == nil
+             end) =~ "Socket error: connection refused"
+    end
+
+    test "handshake error", %{config: config} do
+      fake_socket = make_ref()
+
+      MockTCPAdapter
+      |> expect(:connect, fn _, _, _, _ ->
+        {:ok, fake_socket}
+      end)
+      |> expect(:recv, fn ^fake_socket, _, _ ->
+        Codec.encode(:unicode, "Some invalid text\r\n")
+      end)
+      |> expect(:close, fn ^fake_socket ->
+        :ok
+      end)
+
+      assert capture_log(fn ->
+               client = start_supervised!({Client, config})
+
+               eventually(fn ->
+                 !Process.alive?(client)
+               end)
+             end) =~ "Socket is not a valid FLHook socket"
+    end
 
     test "auth error"
 
