@@ -27,7 +27,7 @@ defmodule FLHook.ClientTest do
          password: "$3cret",
          port: 1920,
          send_timeout: 4567,
-         subscribers: [self()],
+         subscribers: [],
          tcp_adapter: MockTCPAdapter
        )}
   end
@@ -340,5 +340,83 @@ defmodule FLHook.ClientTest do
         assert Client.connected?(client) == false
       end)
     end
+  end
+
+  describe "close/1" do
+    # TODO
+  end
+
+  describe "cmd/1" do
+    # TODO
+  end
+
+  describe "cmd!/1" do
+    # TODO
+  end
+
+  describe "subscribe/2" do
+    setup :stub_successful_connection
+
+    test "put subscription", %{config: config} do
+      test_pid = self()
+      client = start_supervised!({Client, config})
+
+      assert :ok = Client.subscribe(client, test_pid)
+
+      assert %{^test_pid => monitor_ref} =
+               :sys.get_state(client).mod_state.subscriptions
+
+      assert is_reference(monitor_ref)
+    end
+
+    test "do not overwrite existing subscription", %{config: config} do
+      test_pid = self()
+      client = start_supervised!({Client, config})
+
+      assert :ok = Client.subscribe(client, test_pid)
+      subscriptions = :sys.get_state(client).mod_state.subscriptions
+
+      assert :ok = Client.subscribe(client, test_pid)
+      assert :sys.get_state(client).mod_state.subscriptions == subscriptions
+    end
+  end
+
+  describe "unsubscribe/2" do
+    setup :stub_successful_connection
+
+    test "remove subscription", %{config: config} do
+      test_pid = self()
+      config = %{config | subscribers: [test_pid]}
+
+      client = start_supervised!({Client, config})
+
+      assert %{^test_pid => _} = :sys.get_state(client).mod_state.subscriptions
+      assert :ok = Client.unsubscribe(client, test_pid)
+      assert :sys.get_state(client).mod_state.subscriptions == %{}
+    end
+
+    test "no-op when subscription not found", %{config: config} do
+      test_pid = self()
+      client = start_supervised!({Client, config})
+
+      assert :sys.get_state(client).mod_state.subscriptions == %{}
+      assert :ok = Client.unsubscribe(client, test_pid)
+      assert :sys.get_state(client).mod_state.subscriptions == %{}
+    end
+  end
+
+  defp stub_successful_connection(_context) do
+    stub_with(FLHook.MockTCPAdapter, FLHook.StubTCPAdapter)
+    stub_with(FLHook.MockInetAdapter, FLHook.StubInetAdapter)
+
+    FLHook.MockTCPAdapter
+    |> expect(:recv, fn _, _, _ ->
+      Codec.encode(:unicode, "Welcome to FLHack\r\n")
+    end)
+    |> expect(:recv, fn _, _, _ ->
+      Codec.encode(:unicode, "OK\r\n")
+    end)
+
+    :ok
   end
 end
