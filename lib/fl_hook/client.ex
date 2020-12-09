@@ -44,6 +44,11 @@ defmodule FLHook.Client do
   @callback close() :: :ok
 
   @doc """
+  Determines whether the client is currently connected to a FLHook socket.
+  """
+  @callback connected?() :: boolean
+
+  @doc """
   Sends a command to the server and returns the result.
   """
   @callback cmd(cmd :: Command.command()) ::
@@ -108,6 +113,11 @@ defmodule FLHook.Client do
       @impl Client
       def close do
         Client.close(__MODULE__)
+      end
+
+      @impl Client
+      def connected? do
+        Client.connected?(__MODULE__)
       end
 
       @impl Client

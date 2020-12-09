@@ -13,26 +13,26 @@ defmodule FLHook.ClientTest do
 
   setup :set_mox_global
 
-  describe "start_link/1" do
-    setup do
-      {:ok,
-       config:
-         Config.new(
-           backoff_interval: 1234,
-           codec: :unicode,
-           connect_timeout: 2345,
-           event_mode: false,
-           handshake_recv_timeout: 3456,
-           host: "foo.bar",
-           inet_adapter: MockInetAdapter,
-           password: "$3cret",
-           port: 1920,
-           send_timeout: 4567,
-           subscribers: [self()],
-           tcp_adapter: MockTCPAdapter
-         )}
-    end
+  setup do
+    {:ok,
+     config:
+       Config.new(
+         backoff_interval: 1234,
+         codec: :unicode,
+         connect_timeout: 2345,
+         event_mode: false,
+         handshake_recv_timeout: 3456,
+         host: "foo.bar",
+         inet_adapter: MockInetAdapter,
+         password: "$3cret",
+         port: 1920,
+         send_timeout: 4567,
+         subscribers: [self()],
+         tcp_adapter: MockTCPAdapter
+       )}
+  end
 
+  describe "start_link/1" do
     test "connect", %{config: config} do
       test_pid = self()
       fake_socket = make_ref()
@@ -238,6 +238,51 @@ defmodule FLHook.ClientTest do
 
                eventually(fn -> verify!() end)
              end) =~ "Command error: insufficient rights"
+    end
+  end
+
+  describe "connected?/1" do
+    setup :verify_on_exit!
+
+    test "connected", %{config: config} do
+      fake_socket = make_ref()
+
+      MockTCPAdapter
+      |> expect(:connect, fn _, _, _, _ ->
+        {:ok, fake_socket}
+      end)
+      |> expect(:recv, fn ^fake_socket, _, _ ->
+        Codec.encode(:unicode, "Welcome to FLHack\r\n")
+      end)
+      |> expect(:send, fn ^fake_socket, _ ->
+        :ok
+      end)
+      |> expect(:recv, fn ^fake_socket, _, _ ->
+        Codec.encode(:unicode, "OK\r\n")
+      end)
+      |> expect(:controlling_process, fn ^fake_socket, _ ->
+        :ok
+      end)
+
+      expect(MockInetAdapter, :setopts, fn ^fake_socket, _ ->
+        :ok
+      end)
+
+      client = start_supervised!({Client, config})
+
+      assert Client.connected?(client) == true
+    end
+
+    test "disconnected", %{config: config} do
+      expect(MockTCPAdapter, :connect, fn _, _, _, _ ->
+        {:error, :econnrefused}
+      end)
+
+      capture_log(fn ->
+        client = start_supervised!({Client, config})
+
+        assert Client.connected?(client) == false
+      end)
     end
   end
 end
