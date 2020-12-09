@@ -66,9 +66,65 @@ defmodule FLHook.ClientTest do
 
       client = start_supervised!({Client, config})
 
-      # Check state
       assert eventually(fn -> verify!() end)
       assert :sys.get_state(client).mod_state.socket == fake_socket
+    end
+
+    test "connect with options keyword list" do
+      test_pid = self()
+      fake_socket = make_ref()
+
+      {:ok, pass_cmd} = Codec.encode(:unicode, "pass $3cret\r\n")
+
+      MockTCPAdapter
+      |> expect(:connect, fn 'foo.bar',
+                             1920,
+                             [:binary, active: false, send_timeout: 4567],
+                             2345 ->
+        {:ok, fake_socket}
+      end)
+      |> expect(:recv, fn ^fake_socket, 0, 3456 ->
+        Codec.encode(:unicode, "Welcome to FLHack\r\n")
+      end)
+      |> expect(:send, fn ^fake_socket, ^pass_cmd ->
+        :ok
+      end)
+      |> expect(:recv, fn ^fake_socket, 0, 3456 ->
+        Codec.encode(:unicode, "OK\r\n")
+      end)
+      |> expect(:controlling_process, fn ^fake_socket, pid ->
+        send(test_pid, {:controlling_process, pid})
+        :ok
+      end)
+
+      expect(MockInetAdapter, :setopts, fn ^fake_socket, [active: :once] ->
+        :ok
+      end)
+
+      opts = [
+        backoff_interval: 1234,
+        codec: :unicode,
+        connect_timeout: 2345,
+        event_mode: false,
+        handshake_recv_timeout: 3456,
+        host: "foo.bar",
+        inet_adapter: MockInetAdapter,
+        name: FLHook.NamedTestClient,
+        password: "$3cret",
+        port: 1920,
+        send_timeout: 4567,
+        subscribers: [self()],
+        tcp_adapter: MockTCPAdapter
+      ]
+
+      client = start_supervised!({Client, opts})
+
+      assert eventually(fn -> verify!() end)
+
+      client_state = :sys.get_state(client)
+
+      assert client_state.mod_state.socket == fake_socket
+      assert client_state == :sys.get_state(FLHook.NamedTestClient)
     end
 
     test "connect with event mode", %{config: config} do
