@@ -11,8 +11,8 @@ defmodule FLHook.Client do
   alias FLHook.Client.Reply
   alias FLHook.Codec
   alias FLHook.CodecError
-  alias FLHook.Command
   alias FLHook.CommandError
+  alias FLHook.CommandSerializer
   alias FLHook.Config
   alias FLHook.ConfigError
   alias FLHook.Event
@@ -51,14 +51,14 @@ defmodule FLHook.Client do
   @doc """
   Sends a command to the server and returns the result.
   """
-  @callback cmd(cmd :: Command.command()) ::
+  @callback cmd(cmd :: FLHook.command()) ::
               {:ok, Result.t()} | {:error, cmd_error}
 
   @doc """
   Sends a command to the server and returns the result. Raises when the command
   fails.
   """
-  @callback cmd!(cmd :: Command.command()) :: Result.t() | no_return
+  @callback cmd!(cmd :: FLHook.command()) :: Result.t() | no_return
 
   @doc """
   Lets the current process subscribe to events emitted by the FLHook client.
@@ -178,13 +178,13 @@ defmodule FLHook.Client do
     Connection.call(client, :connected?)
   end
 
-  @spec cmd(client, Command.command()) ::
+  @spec cmd(client, FLHook.command()) ::
           {:ok, Result.t()} | {:error, cmd_error}
   def cmd(client, cmd) do
-    Connection.call(client, {:cmd, Command.to_string(cmd)})
+    Connection.call(client, {:cmd, CommandSerializer.to_string(cmd)})
   end
 
-  @spec cmd!(client, Command.command()) :: Result.t() | no_return
+  @spec cmd!(client, FLHook.command()) :: Result.t() | no_return
   def cmd!(client, cmd) do
     case cmd(client, cmd) do
       {:ok, result} -> result
@@ -476,7 +476,7 @@ defmodule FLHook.Client do
   end
 
   defp cmd_passive(socket, config, cmd) do
-    with :ok <- send_cmd(socket, config, Command.to_string(cmd)),
+    with :ok <- send_cmd(socket, config, CommandSerializer.to_string(cmd)),
          {:ok, result} <- read_cmd_result(socket, config) do
       {:ok, result}
     end

@@ -1,7 +1,7 @@
-defmodule FLHook.DispatchableTuple do
+defmodule FLHook.CommandTuple do
   defstruct [:cmd, :args]
 
-  defimpl FLHook.Dispatchable do
+  defimpl FLHook.Command do
     def to_cmd(dispatchable) do
       {dispatchable.cmd, dispatchable.args}
     end
