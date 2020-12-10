@@ -45,6 +45,10 @@ defmodule FLHook.ResultTest do
                "baz" => "boo"
              }
     end
+
+    test "gets empty map when result has no lines" do
+      assert Result.params(%{@params_result | lines: []}) == %{}
+    end
   end
 
   describe "file_stream!/1" do
