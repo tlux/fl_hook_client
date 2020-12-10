@@ -3,6 +3,10 @@ defprotocol FLHook.Command do
   A protocol to implement custom commands.
   """
 
-  @spec to_cmd(t) :: String.t() | {String.t(), [String.Chars.t()]}
+  @doc """
+  Returns a command string or tuple. It may even return another command except
+  itself.
+  """
+  @spec to_cmd(t) :: FLHook.command()
   def to_cmd(command)
 end

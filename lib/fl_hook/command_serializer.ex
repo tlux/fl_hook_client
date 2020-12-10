@@ -1,7 +1,5 @@
 defmodule FLHook.CommandSerializer do
-  @moduledoc """
-  A module providing helpers to serialize commands.
-  """
+  @moduledoc false
 
   alias FLHook.Command
   alias FLHook.Utils
@@ -11,7 +9,6 @@ defmodule FLHook.CommandSerializer do
     "\n" => "\\n"
   }
 
-  @doc false
   @spec to_string(FLHook.command()) ::
           String.t()
   def to_string({cmd, args}) when is_binary(cmd) and is_list(args) do
