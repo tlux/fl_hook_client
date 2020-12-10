@@ -10,6 +10,7 @@ defmodule FLHook.ClientTest do
   alias FLHook.Config
   alias FLHook.MockInetAdapter
   alias FLHook.MockTCPAdapter
+  alias FLHook.Result
 
   setup :set_mox_global
 
@@ -347,11 +348,53 @@ defmodule FLHook.ClientTest do
   end
 
   describe "cmd/1" do
-    # TODO
+    setup :stub_successful_connection
+
+    test "successfully run string command", %{config: config, socket: socket} do
+      client = start_supervised!({Client, config})
+
+      {:ok, cmd} = Codec.encode(:unicode, "isloggedin Foobar\r\n")
+
+      expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
+        :ok
+      end)
+
+      task =
+        Task.async(fn ->
+          Client.cmd(client, "isloggedin Foobar")
+        end)
+
+      assert eventually(fn -> command_queued?(client) end)
+
+      expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
+        :ok
+      end)
+
+      {:ok, msg} = Codec.encode(:unicode, "OK\r\n")
+      send(client, {:tcp, socket, msg})
+
+      assert {:ok, %Result{lines: []}} = Task.await(task)
+    end
+
+    test "successfully run tuple command"
+
+    test "command error"
+
+    test "socket error"
+
+    test "timeout error"
   end
 
   describe "cmd!/1" do
-    # TODO
+    test "successfully run string command"
+
+    test "successfully run tuple command"
+
+    test "command error"
+
+    test "socket error"
+
+    test "timeout error"
   end
 
   describe "subscribe/2" do
@@ -406,17 +449,33 @@ defmodule FLHook.ClientTest do
   end
 
   defp stub_successful_connection(_context) do
-    stub_with(FLHook.MockTCPAdapter, FLHook.StubTCPAdapter)
-    stub_with(FLHook.MockInetAdapter, FLHook.StubInetAdapter)
+    socket = make_ref()
 
-    FLHook.MockTCPAdapter
-    |> expect(:recv, fn _, _, _ ->
+    MockTCPAdapter
+    |> expect(:connect, fn _, _, _, _ ->
+      {:ok, socket}
+    end)
+    |> expect(:recv, fn ^socket, _, _ ->
       Codec.encode(:unicode, "Welcome to FLHack\r\n")
     end)
-    |> expect(:recv, fn _, _, _ ->
+    |> expect(:send, fn ^socket, _ ->
+      :ok
+    end)
+    |> expect(:recv, fn ^socket, _, _ ->
       Codec.encode(:unicode, "OK\r\n")
     end)
+    |> expect(:controlling_process, fn ^socket, _ ->
+      :ok
+    end)
 
-    :ok
+    expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
+      :ok
+    end)
+
+    {:ok, socket: socket}
+  end
+
+  defp command_queued?(client) do
+    :queue.len(:sys.get_state(client).mod_state.queue) > 0
   end
 end
