@@ -7,10 +7,12 @@ defmodule FLHook.ClientTest do
 
   alias FLHook.Client
   alias FLHook.Codec
+  alias FLHook.CommandError
   alias FLHook.Config
   alias FLHook.MockInetAdapter
   alias FLHook.MockTCPAdapter
   alias FLHook.Result
+  alias FLHook.SocketError
 
   setup :set_mox_global
 
@@ -350,11 +352,14 @@ defmodule FLHook.ClientTest do
   describe "cmd/1" do
     setup :stub_successful_connection
 
-    test "successfully run string command", %{config: config, socket: socket} do
-      client = start_supervised!({Client, config})
+    setup %{config: config} do
+      {:ok, client: start_supervised!({Client, config})}
+    end
 
+    test "successfully run string command", %{client: client, socket: socket} do
       {:ok, cmd} = Codec.encode(:unicode, "isloggedin Foobar\r\n")
 
+      # Command sent
       expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
         :ok
       end)
@@ -366,6 +371,7 @@ defmodule FLHook.ClientTest do
 
       assert eventually(fn -> command_queued?(client) end)
 
+      # Result received
       expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
         :ok
       end)
@@ -376,9 +382,75 @@ defmodule FLHook.ClientTest do
       assert {:ok, %Result{lines: []}} = Task.await(task)
     end
 
-    test "successfully run tuple command"
+    test "successfully run tuple command", %{client: client, socket: socket} do
+      {:ok, cmd} = Codec.encode(:unicode, "addcash Foobar 1234\r\n")
 
-    test "command error"
+      # Command sent
+      expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
+        :ok
+      end)
+
+      task =
+        Task.async(fn ->
+          Client.cmd(client, {"addcash", ["Foobar", 1234]})
+        end)
+
+      assert eventually(fn -> command_queued?(client) end)
+
+      # Result received
+      expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
+        :ok
+      end)
+
+      {:ok, msg} = Codec.encode(:unicode, "OK\r\n")
+      send(client, {:tcp, socket, msg})
+
+      assert {:ok, %Result{lines: []}} = Task.await(task)
+    end
+
+    test "command error", %{client: client, socket: socket} do
+      {:ok, cmd} = Codec.encode(:unicode, "addcash Foobar 1234\r\n")
+
+      # Command sent
+      expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
+        :ok
+      end)
+
+      task =
+        Task.async(fn ->
+          Client.cmd(client, "addcash Foobar 1234")
+        end)
+
+      assert eventually(fn -> command_queued?(client) end)
+
+      # Result received
+      expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
+        :ok
+      end)
+
+      {:ok, msg} = Codec.encode(:unicode, "ERR player not logged in\r\n")
+      send(client, {:tcp, socket, msg})
+
+      assert Task.await(task) ==
+               {:error, %CommandError{detail: "player not logged in"}}
+    end
+
+    test "connection closed error", %{client: client, socket: socket} do
+      MockTCPAdapter
+      |> expect(:close, fn ^socket ->
+        :ok
+      end)
+      |> expect(:connect, fn _, _, _, _ ->
+        {:error, :econnrefused}
+      end)
+
+      :ok = Client.close(client)
+
+      capture_log(fn ->
+        assert Client.cmd(client, "isloggedin Foobar") ==
+                 {:error, %SocketError{reason: :closed}}
+      end)
+    end
 
     test "socket error"
 
@@ -386,15 +458,21 @@ defmodule FLHook.ClientTest do
   end
 
   describe "cmd!/1" do
-    test "successfully run string command"
+    setup :stub_successful_connection
 
-    test "successfully run tuple command"
+    setup %{config: config} do
+      {:ok, client: start_supervised!({Client, config})}
+    end
 
-    test "command error"
+    test "successfully run command"
 
-    test "socket error"
+    test "raise command error"
 
-    test "timeout error"
+    test "raise connection closed error"
+
+    test "raise socket error"
+
+    test "raise timeout error"
   end
 
   describe "subscribe/2" do
