@@ -13,9 +13,9 @@ defmodule FLHook do
   """
 
   alias FLHook.Client
+  alias FLHook.Command
 
-  @type command ::
-          String.t() | {String.t(), [String.Chars.t()]} | FLHook.Command.t()
+  @type command :: Command.serializable() | Command.t()
 
   @doc """
   Prints out the help document from the server.

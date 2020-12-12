@@ -9,10 +9,13 @@ defmodule FLHook.CommandSerializer do
     "\n" => "\\n"
   }
 
-  @spec to_string(FLHook.command()) ::
-          String.t()
+  @spec to_string(FLHook.command()) :: String.t()
   def to_string({cmd, args}) when is_binary(cmd) and is_list(args) do
-    [cmd | args]
+    __MODULE__.to_string([cmd | args])
+  end
+
+  def to_string(cmd) when is_list(cmd) do
+    cmd
     |> Enum.join(" ")
     |> escape_newlines()
   end
@@ -21,8 +24,8 @@ defmodule FLHook.CommandSerializer do
     escape_newlines(cmd)
   end
 
-  def to_string(command) do
-    command
+  def to_string(cmd) do
+    cmd
     |> Command.to_cmd()
     |> __MODULE__.to_string()
   end

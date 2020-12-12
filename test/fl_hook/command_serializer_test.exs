@@ -23,33 +23,33 @@ defmodule FLHook.CommandSerializerTest do
     end
 
     test "serialize FLHook.Command returning string" do
-      assert CommandSerializer.to_string(%CommandString{cmd: "foo"}) ==
+      assert CommandSerializer.to_string(%CommandString{name: "foo"}) ==
                "foo"
 
-      assert CommandSerializer.to_string(%CommandString{cmd: "foo\r\nbar"}) ==
+      assert CommandSerializer.to_string(%CommandString{name: "foo\r\nbar"}) ==
                "foo\\r\\nbar"
     end
 
     test "serialize FLHook.Command returning tuple" do
       assert CommandSerializer.to_string(%CommandTuple{
-               cmd: "foo",
+               name: "foo",
                args: []
              }) ==
                "foo"
 
       assert CommandSerializer.to_string(%CommandTuple{
-               cmd: "foo\r\nbar",
+               name: "foo\r\nbar",
                args: []
              }) ==
                "foo\\r\\nbar"
 
       assert CommandSerializer.to_string(%CommandTuple{
-               cmd: "foo",
+               name: "foo",
                args: ["bar", 1337]
              }) == "foo bar 1337"
 
       assert CommandSerializer.to_string(%CommandTuple{
-               cmd: "foo",
+               name: "foo",
                args: ["bar\r\nbaz", 1337]
              }) == "foo bar\\r\\nbaz 1337"
     end
