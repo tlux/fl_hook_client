@@ -452,9 +452,7 @@ defmodule FLHook.ClientTest do
       end)
     end
 
-    test "socket error"
-
-    test "timeout error"
+    test "decode error"
   end
 
   describe "cmd!/1" do
@@ -470,9 +468,7 @@ defmodule FLHook.ClientTest do
 
     test "raise connection closed error"
 
-    test "raise socket error"
-
-    test "raise timeout error"
+    test "raise on decode error"
   end
 
   describe "subscribe/2" do
@@ -526,7 +522,80 @@ defmodule FLHook.ClientTest do
     end
   end
 
-  defp stub_successful_connection(_context) do
+  describe "message loop" do
+    setup :stub_successful_connection
+
+    test "socket error", %{config: config, socket: socket} do
+      expect(MockTCPAdapter, :close, fn ^socket -> :ok end)
+
+      stub_successful_connection()
+
+      assert capture_log(fn ->
+               client = start_supervised!({Client, config})
+
+               send(client, {:tcp_error, socket, :econnrefused})
+
+               eventually(fn -> verify!() end)
+             end) =~ "Socket error: connection refused"
+    end
+
+    test "closed error", %{config: config, socket: socket} do
+      expect(MockTCPAdapter, :close, fn ^socket -> :ok end)
+
+      stub_successful_connection()
+
+      assert capture_log(fn ->
+               client = start_supervised!({Client, config})
+
+               send(client, {:tcp_closed, socket})
+
+               eventually(fn -> verify!() end)
+             end) =~ "Socket error: connection closed"
+    end
+
+    test "timeout error", %{config: config, socket: socket} do
+      expect(MockTCPAdapter, :close, fn ^socket -> :ok end)
+
+      stub_successful_connection()
+
+      assert capture_log(fn ->
+               client = start_supervised!({Client, config})
+
+               send(client, {:tcp_error, socket, :timeout})
+
+               eventually(fn -> verify!() end)
+             end) =~ "Socket error: connection timed out"
+    end
+
+    test "subscriber exit", %{config: config} do
+      {:ok, subscriber} =
+        Task.start_link(fn ->
+          Process.sleep(250)
+        end)
+
+      client =
+        start_supervised!({Client, %{config | subscribers: [subscriber]}})
+
+      assert %{^subscriber => monitor_ref} =
+               :sys.get_state(client).mod_state.subscriptions
+
+      assert is_reference(monitor_ref)
+
+      assert eventually(fn ->
+               map_size(:sys.get_state(client).mod_state.subscriptions) == 0
+             end)
+
+      verify!()
+    end
+  end
+
+  describe "event handling" do
+    setup :stub_successful_connection
+
+    # test ""
+  end
+
+  defp stub_successful_connection(_context \\ nil) do
     socket = make_ref()
 
     MockTCPAdapter

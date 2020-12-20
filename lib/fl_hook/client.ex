@@ -349,12 +349,7 @@ defmodule FLHook.Client do
   end
 
   def handle_info({:DOWN, monitor_ref, :process, subscriber, _info}, state) do
-    subscriptions =
-      case Map.pop(state.subscriptions, subscriber) do
-        {^monitor_ref, subscriptions} -> subscriptions
-        {_, subscriptions} -> subscriptions
-      end
-
+    {^monitor_ref, subscriptions} = Map.pop(state.subscriptions, subscriber)
     {:noreply, %{state | subscriptions: subscriptions}}
   end
 
