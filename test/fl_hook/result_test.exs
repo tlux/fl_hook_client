@@ -26,15 +26,17 @@ defmodule FLHook.ResultTest do
   end
 
   describe "params_list/1" do
-    assert Result.params_list(@params_result) == [
-             %{
-               "foo" => "bar",
-               "bar" => "baz",
-               "baz" => "boo"
-             },
-             %{"bar" => "baz"},
-             %{"lorem" => "ipsum"}
-           ]
+    test "decodes params from all lines" do
+      assert Result.params_list(@params_result) == [
+               %{
+                 "foo" => "bar",
+                 "bar" => "baz",
+                 "baz" => "boo"
+               },
+               %{"bar" => "baz"},
+               %{"lorem" => "ipsum"}
+             ]
+    end
   end
 
   describe "params/1" do
