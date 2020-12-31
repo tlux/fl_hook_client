@@ -226,7 +226,7 @@ defmodule FLHook.Client do
       {:connect, nil,
        %{
          config: config,
-         queue: :queue.new(),
+         queue: nil,
          socket: nil,
          subscriptions: subscriptions
        }}
@@ -239,7 +239,7 @@ defmodule FLHook.Client do
   def connect(_info, %{config: config} = state) do
     case socket_connect(config) do
       {:ok, socket} ->
-        after_connect(%{state | socket: socket})
+        after_connect(%{state | queue: :queue.new(), socket: socket})
 
       {:error, error} ->
         log_error(error, config)

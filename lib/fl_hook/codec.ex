@@ -11,37 +11,45 @@ defmodule FLHook.Codec do
   """
   @type codec :: :unicode
 
+  @codecs %{unicode: {:utf16, :little}}
+
   @doc """
   Decodes binary data from the socket using the specified codec.
   """
   @spec decode(codec, binary) :: {:ok, String.t()} | {:error, CodecError.t()}
-  def decode(:unicode, value) do
-    {:ok, :unicode.characters_to_binary(value, {:utf16, :little}, :utf8)}
-  end
-
   def decode(codec, value) do
-    {:error,
-     %CodecError{
-       direction: :decode,
-       codec: codec,
-       value: value
-     }}
+    with {:ok, src_encoding} <- Map.fetch(@codecs, codec),
+         str when is_binary(str) <-
+           :unicode.characters_to_binary(value, src_encoding, :utf8) do
+      {:ok, str}
+    else
+      _ ->
+        {:error,
+         %CodecError{
+           direction: :decode,
+           codec: codec,
+           value: value
+         }}
+    end
   end
 
   @doc """
   Encodes strings that will be sent to the socket using the specified codec.
   """
   @spec encode(codec, String.t()) :: {:ok, binary} | {:error, CodecError.t()}
-  def encode(:unicode, value) do
-    {:ok, :unicode.characters_to_binary(value, :utf8, {:utf16, :little})}
-  end
-
   def encode(codec, value) do
-    {:error,
-     %CodecError{
-       direction: :encode,
-       codec: codec,
-       value: value
-     }}
+    with {:ok, dest_encoding} <- Map.fetch(@codecs, codec),
+         str when is_binary(str) <-
+           :unicode.characters_to_binary(value, :utf8, dest_encoding) do
+      {:ok, str}
+    else
+      _ ->
+        {:error,
+         %CodecError{
+           direction: :encode,
+           codec: codec,
+           value: value
+         }}
+    end
   end
 end

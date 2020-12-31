@@ -7,6 +7,7 @@ defmodule FLHook.ClientTest do
 
   alias FLHook.Client
   alias FLHook.Codec
+  alias FLHook.CodecError
   alias FLHook.CommandError
   alias FLHook.Config
   alias FLHook.MockInetAdapter
@@ -345,10 +346,6 @@ defmodule FLHook.ClientTest do
     end
   end
 
-  describe "close/1" do
-    # TODO
-  end
-
   describe "cmd/1" do
     setup :stub_successful_connection
 
@@ -452,7 +449,45 @@ defmodule FLHook.ClientTest do
       end)
     end
 
-    test "decode error"
+    test "decode error", %{client: client, socket: socket} do
+      {:ok, cmd} = Codec.encode(:unicode, "addcash Foobar 1234\r\n")
+
+      # Command sent
+      MockTCPAdapter
+      |> expect(:send, fn ^socket, ^cmd -> :ok end)
+      |> expect(:close, fn ^socket -> :ok end)
+      |> expect(:connect, fn _, _, _, _ ->
+        {:error, :econnrefused}
+      end)
+
+      expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
+        :ok
+      end)
+
+      Process.flag(:trap_exit, true)
+
+      capture_log(fn ->
+        catch_exit do
+          task =
+            Task.async(fn ->
+              Client.cmd(client, {"addcash", ["Foobar", 1234]})
+            end)
+
+          eventually(fn -> command_queued?(client) end)
+
+          send(client, {:tcp, socket, "invalid"})
+
+          Task.await(task)
+        end
+
+        assert_received {:EXIT, _,
+                         {%CodecError{
+                            codec: :unicode,
+                            direction: :decode,
+                            value: "invalid"
+                          }, _}}
+      end)
+    end
   end
 
   describe "cmd!/1" do
@@ -467,8 +502,6 @@ defmodule FLHook.ClientTest do
     test "raise command error"
 
     test "raise connection closed error"
-
-    test "raise on decode error"
   end
 
   describe "subscribe/2" do
@@ -528,7 +561,7 @@ defmodule FLHook.ClientTest do
     test "socket error", %{config: config, socket: socket} do
       expect(MockTCPAdapter, :close, fn ^socket -> :ok end)
 
-      stub_successful_connection()
+      stub_successful_connection(config)
 
       assert capture_log(fn ->
                client = start_supervised!({Client, config})
@@ -542,7 +575,7 @@ defmodule FLHook.ClientTest do
     test "closed error", %{config: config, socket: socket} do
       expect(MockTCPAdapter, :close, fn ^socket -> :ok end)
 
-      stub_successful_connection()
+      stub_successful_connection(config)
 
       assert capture_log(fn ->
                client = start_supervised!({Client, config})
@@ -556,7 +589,7 @@ defmodule FLHook.ClientTest do
     test "timeout error", %{config: config, socket: socket} do
       expect(MockTCPAdapter, :close, fn ^socket -> :ok end)
 
-      stub_successful_connection()
+      stub_successful_connection(config)
 
       assert capture_log(fn ->
                client = start_supervised!({Client, config})
@@ -595,7 +628,11 @@ defmodule FLHook.ClientTest do
     # test ""
   end
 
-  defp stub_successful_connection(_context \\ nil) do
+  defp stub_successful_connection(%{config: config}) do
+    {:ok, socket: stub_successful_connection(config)}
+  end
+
+  defp stub_successful_connection(%Config{} = config) do
     socket = make_ref()
 
     MockTCPAdapter
@@ -603,13 +640,13 @@ defmodule FLHook.ClientTest do
       {:ok, socket}
     end)
     |> expect(:recv, fn ^socket, _, _ ->
-      Codec.encode(:unicode, "Welcome to FLHack\r\n")
+      Codec.encode(config.codec, "Welcome to FLHack\r\n")
     end)
     |> expect(:send, fn ^socket, _ ->
       :ok
     end)
     |> expect(:recv, fn ^socket, _, _ ->
-      Codec.encode(:unicode, "OK\r\n")
+      Codec.encode(config.codec, "OK\r\n")
     end)
     |> expect(:controlling_process, fn ^socket, _ ->
       :ok
@@ -619,7 +656,7 @@ defmodule FLHook.ClientTest do
       :ok
     end)
 
-    {:ok, socket: socket}
+    socket
   end
 
   defp command_queued?(client) do
