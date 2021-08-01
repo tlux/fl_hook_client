@@ -290,7 +290,7 @@ defmodule FLHook.Client do
     case send_cmd(state.socket, state.config, cmd) do
       :ok ->
         queue = :queue.in(%Reply{client: from}, state.queue)
-        {:noreply, %{state | queue: queue}}
+        {:noreply, %{state | queue: queue}, state.config.recv_timeout}
 
       error ->
         {:reply, error, state}
@@ -346,6 +346,10 @@ defmodule FLHook.Client do
 
   def handle_info({:tcp_error, _socket, reason}, state) do
     {:disconnect, %SocketError{reason: reason}, state}
+  end
+  
+  def handle_info(:timeout, state) do
+    # TODO: Respond with timeout
   end
 
   def handle_info({:DOWN, monitor_ref, :process, subscriber, _info}, state) do
@@ -423,7 +427,7 @@ defmodule FLHook.Client do
   defp read_chunk(socket, config) do
     with {:socket, {:ok, value}} <-
            {:socket,
-            config.tcp_adapter.recv(socket, 0, config.handshake_recv_timeout)},
+            config.tcp_adapter.recv(socket, 0, config.recv_timeout)},
          {:codec, {:ok, decoded}} <- {:codec, Codec.decode(config.codec, value)} do
       {:ok, decoded}
     else
