@@ -17,11 +17,11 @@ defmodule FLHook.ConfigTest do
       assert config.codec == :unicode
       assert config.connect_timeout == 5000
       assert config.event_mode == false
-      assert config.handshake_recv_timeout == 5000
       assert config.host == "localhost"
       assert config.inet_adapter == :inet
       assert config.password == nil
       assert config.port == 1920
+      assert config.recv_timeout == 5000
       assert config.send_timeout == 5000
       assert config.subscribers == []
       assert config.tcp_adapter == :gen_tcp
@@ -34,11 +34,11 @@ defmodule FLHook.ConfigTest do
           codec: :ascii,
           connect_timeout: 2345,
           event_mode: true,
-          handshake_recv_timeout: 3456,
           host: "192.168.178.22",
           inet_adapter: FLHook.MockInetAdapter,
           password: "Test1234",
           port: 1919,
+          recv_timeout: 3456,
           send_timeout: 4567,
           subscribers: [self()],
           tcp_adapter: FLHook.MockTCPAdapter
@@ -48,11 +48,11 @@ defmodule FLHook.ConfigTest do
       assert config.codec == :ascii
       assert config.connect_timeout == 2345
       assert config.event_mode == true
-      assert config.handshake_recv_timeout == 3456
       assert config.host == "192.168.178.22"
       assert config.inet_adapter == FLHook.MockInetAdapter
       assert config.password == "Test1234"
       assert config.port == 1919
+      assert config.recv_timeout == 3456
       assert config.send_timeout == 4567
       assert config.subscribers == [self()]
       assert config.tcp_adapter == FLHook.MockTCPAdapter

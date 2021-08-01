@@ -25,11 +25,11 @@ defmodule FLHook.ClientTest do
          codec: :unicode,
          connect_timeout: 2345,
          event_mode: false,
-         handshake_recv_timeout: 3456,
          host: "foo.bar",
          inet_adapter: MockInetAdapter,
          password: "$3cret",
          port: 1920,
+         recv_timeout: 3456,
          send_timeout: 4567,
          subscribers: [],
          tcp_adapter: MockTCPAdapter
@@ -110,12 +110,12 @@ defmodule FLHook.ClientTest do
         codec: :unicode,
         connect_timeout: 2345,
         event_mode: false,
-        handshake_recv_timeout: 3456,
         host: "foo.bar",
         inet_adapter: MockInetAdapter,
         name: FLHook.NamedTestClient,
         password: "$3cret",
         port: 1920,
+        recv_timeout: 3456,
         send_timeout: 4567,
         subscribers: [self()],
         tcp_adapter: MockTCPAdapter
@@ -487,6 +487,29 @@ defmodule FLHook.ClientTest do
                             value: "invalid"
                           }, _}}
       end)
+    end
+
+    test "timeout error on receive", %{client: client, socket: socket} do
+      {:ok, cmd} = Codec.encode(:unicode, "help\r\n")
+
+      # Command sent
+      expect(MockTCPAdapter, :send, fn ^socket, ^cmd -> :ok end)
+
+      task =
+        Task.async(fn ->
+          Client.cmd(client, "help")
+        end)
+
+      assert eventually(fn -> command_queued?(client) end)
+
+      # Result received
+      expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
+        :ok
+      end)
+
+      send(client, :timeout)
+
+      assert {:error, %SocketError{reason: :timeout}} = Task.await(task)
     end
   end
 
