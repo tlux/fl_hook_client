@@ -227,6 +227,7 @@ defmodule FLHook.Client do
        %{
          config: config,
          queue: nil,
+         recv_timeout_ref: nil,
          socket: nil,
          subscriptions: subscriptions
        }}
@@ -249,6 +250,8 @@ defmodule FLHook.Client do
 
   @impl true
   def disconnect(info, state) do
+    maybe_cancel_timer(state.recv_timeout_ref)
+
     if state.socket do
       :ok = state.config.tcp_adapter.close(state.socket)
     end
@@ -268,6 +271,8 @@ defmodule FLHook.Client do
 
   @impl true
   def terminate(_reason, state) do
+    maybe_cancel_timer(state.recv_timeout_ref)
+
     if state.socket do
       :ok = state.config.tcp_adapter.close(state.socket)
     end
@@ -290,7 +295,11 @@ defmodule FLHook.Client do
     case send_cmd(state.socket, state.config, cmd) do
       :ok ->
         queue = :queue.in(%Reply{client: from}, state.queue)
-        {:noreply, %{state | queue: queue}}
+
+        recv_timeout_ref =
+          Process.send_after(self(), :timeout, state.config.recv_timeout)
+
+        {:noreply, %{state | queue: queue, recv_timeout_ref: recv_timeout_ref}}
 
       error ->
         {:reply, error, state}
@@ -341,11 +350,30 @@ defmodule FLHook.Client do
   end
 
   def handle_info({:tcp_closed, _socket}, state) do
+    maybe_cancel_timer(state.recv_timeout_ref)
     {:disconnect, %SocketError{reason: :closed}, state}
   end
 
   def handle_info({:tcp_error, _socket, reason}, state) do
+    maybe_cancel_timer(state.recv_timeout_ref)
     {:disconnect, %SocketError{reason: reason}, state}
+  end
+
+  def handle_info(:timeout, state) do
+    maybe_cancel_timer(state.recv_timeout_ref)
+
+    case :queue.out(state.queue) do
+      {{:value, reply}, new_queue} ->
+        GenServer.reply(
+          reply.client,
+          {:error, %SocketError{reason: :timeout}}
+        )
+
+        {:noreply, %{state | queue: new_queue, recv_timeout_ref: nil}}
+
+      {:empty, _} ->
+        {:noreply, state}
+    end
   end
 
   def handle_info({:DOWN, monitor_ref, :process, subscriber, _info}, state) do
@@ -362,6 +390,8 @@ defmodule FLHook.Client do
   end
 
   defp handle_cmd_resp(msg, state) do
+    maybe_cancel_timer(state.recv_timeout_ref)
+
     case :queue.out(state.queue) do
       {{:value, reply}, new_queue} ->
         case Reply.add_chunk(reply, msg) do
@@ -422,8 +452,7 @@ defmodule FLHook.Client do
 
   defp read_chunk(socket, config) do
     with {:socket, {:ok, value}} <-
-           {:socket,
-            config.tcp_adapter.recv(socket, 0, config.handshake_recv_timeout)},
+           {:socket, config.tcp_adapter.recv(socket, 0, config.recv_timeout)},
          {:codec, {:ok, decoded}} <- {:codec, Codec.decode(config.codec, value)} do
       {:ok, decoded}
     else
@@ -503,6 +532,9 @@ defmodule FLHook.Client do
       :ok
     end
   end
+
+  defp maybe_cancel_timer(nil), do: :ok
+  defp maybe_cancel_timer(timer_ref), do: Process.cancel_timer(timer_ref)
 
   defp log_error(error, config) do
     Logger.error(
