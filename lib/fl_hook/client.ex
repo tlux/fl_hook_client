@@ -349,7 +349,8 @@ defmodule FLHook.Client do
   end
   
   def handle_info(:timeout, state) do
-    # TODO: Respond with timeout
+    # TODO: Pop an item from the queue and respond to the particular client 
+    # with a timeout error. We should also probably disconnect then.
   end
 
   def handle_info({:DOWN, monitor_ref, :process, subscriber, _info}, state) do
