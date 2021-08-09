@@ -37,6 +37,10 @@ defmodule FLHook.Params do
     )
   end
 
+  @doc """
+  Fetches the param with the specified key from the params collection.
+  Optionally allows specification of a type to coerce the param to.
+  """
   @spec fetch(params, key, param_type) :: {:ok, any} | :error
   def fetch(params, key, type \\ :string)
 
@@ -87,7 +91,7 @@ defmodule FLHook.Params do
 
   def fetch(params, key, type_mod) when is_atom(type_mod) do
     if Code.ensure_loaded?(type_mod) && function_exported?(type_mod, :parse, 1) do
-      with {:ok, value} <- fetch(params, key),
+      with {:ok, value} <- Map.fetch(params, key),
            {:ok, value} <- type_mod.parse(value) do
         {:ok, value}
       end
@@ -96,11 +100,68 @@ defmodule FLHook.Params do
     end
   end
 
+  @doc """
+  Fetches the param with the specified key from the params collection.
+  Optionally allows specification of a type to coerce the param to. Raises when
+  the param is missing or could not be coerced to the given type.
+  """
   @spec fetch!(params, key, param_type) :: any | no_return
   def fetch!(params, key, type \\ :string) do
     case fetch(params, key, type) do
       {:ok, value} -> value
       :error -> raise ArgumentError, "invalid or missing param (#{key})"
     end
+  end
+
+  @doc """
+  Fetches a param as boolean from the params collection. Raises when the param
+  is missing or could not be coerced.
+  """
+  @spec boolean!(params, key) :: boolean | no_return
+  def boolean!(params, key) do
+    fetch!(params, key, :boolean)
+  end
+
+  @doc """
+  Fetches a param as duration from the params collection. Raises when the param
+  is missing or could not be coerced.
+  """
+  @spec duration!(params, key) ::
+          %{
+            days: non_neg_integer,
+            hours: non_neg_integer,
+            minutes: non_neg_integer,
+            seconds: non_neg_integer
+          }
+          | no_return
+  def duration!(params, key) do
+    fetch!(params, key, :duration)
+  end
+
+  @doc """
+  Fetches a param as float from the params collection. Raises when the param is
+  missing or could not be coerced.
+  """
+  @spec float!(params, key) :: boolean | no_return
+  def float!(params, key) do
+    fetch!(params, key, :float)
+  end
+
+  @doc """
+  Fetches a param as integer from the params collection. Raises when the param
+  is missing or could not be coerced.
+  """
+  @spec integer!(params, key) :: integer | no_return
+  def integer!(params, key) do
+    fetch!(params, key, :integer)
+  end
+
+  @doc """
+  Fetches a param as string from the params collection. Raises when the param is
+  missing or could not be coerced.
+  """
+  @spec string!(params, key) :: String.t() | no_return
+  def string!(params, key) do
+    fetch!(params, key, :string)
   end
 end
