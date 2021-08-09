@@ -142,7 +142,7 @@ defmodule FLHook.Params do
   Fetches a param as float from the params collection. Raises when the param is
   missing or could not be coerced.
   """
-  @spec float!(params, key) :: boolean | no_return
+  @spec float!(params, key) :: float | no_return
   def float!(params, key) do
     fetch!(params, key, :float)
   end
