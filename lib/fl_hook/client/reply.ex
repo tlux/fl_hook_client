@@ -2,10 +2,9 @@ defmodule FLHook.Client.Reply do
   @moduledoc false
 
   alias FLHook.Result
+  alias FLHook.Utils
 
   defstruct [:client, chardata: [], lines: [], status: :pending]
-
-  @line_sep "\r\n"
 
   @type t :: %__MODULE__{
           chardata: IO.chardata(),
@@ -26,7 +25,7 @@ defmodule FLHook.Client.Reply do
     {status, lines} =
       data
       |> IO.chardata_to_string()
-      |> String.splitter(@line_sep)
+      |> String.splitter(Utils.line_sep())
       |> Enum.reduce_while({:pending, []}, fn
         "OK" <> _, {_, lines} ->
           {:cont, {:ok, lines}}
