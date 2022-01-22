@@ -32,11 +32,11 @@ defmodule FLHook.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:connection, "~> 1.0"},
-      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:excoveralls, "~> 0.13", only: :test},
-      {:ex_doc, "~> 0.23", only: :dev},
+      {:connection, "~> 1.1"},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.1", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.14", only: :test},
+      {:ex_doc, "~> 0.27", only: :dev},
       {:liveness, "~> 1.0", only: :test},
       {:mox, "~> 1.0", only: :test}
     ]

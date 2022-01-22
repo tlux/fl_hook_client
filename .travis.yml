@@ -16,6 +16,10 @@ matrix:
       otp_release: "22.0.1"
     - elixir: "1.11.2"
       otp_release: "23.0.1"
+    - elixir: "1.12.3"
+      otp_release: "23.0.1"
+    - elixir: "1.13.2"
+      otp_release: "24.1.7"
 
 cache:
   directories:
