@@ -10,6 +10,7 @@ defmodule FLHook.ClientTest do
   alias FLHook.CodecError
   alias FLHook.CommandError
   alias FLHook.Config
+  alias FLHook.Event
   alias FLHook.MockInetAdapter
   alias FLHook.MockTCPAdapter
   alias FLHook.Result
@@ -719,9 +720,26 @@ defmodule FLHook.ClientTest do
   end
 
   describe "event handling" do
-    setup :stub_successful_connection
+    Enum.each(Event.__event_types__(), fn event_type ->
+      test "#{event_type} event", %{config: config} do
+        socket = stub_successful_connection(config)
 
-    # TODO
+        client = start_supervised!({Client, config})
+        :ok = Client.subscribe(client, self())
+
+        assert eventually(fn -> Client.connected?(client) end)
+
+        msg = "#{unquote(event_type)} system=Li01 base=Li01_01\r\n"
+
+        expect_socket_set_to_active_once(socket)
+        send_unicode_tcp_message(client, socket, msg)
+
+        {:ok, event} = Event.parse(msg)
+        assert_receive ^event
+
+        eventually(fn -> verify!() end)
+      end
+    end)
   end
 
   defp stub_successful_connection(%{config: config}) do
