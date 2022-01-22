@@ -1,6 +1,6 @@
 # FLHook Client
 
-[![Build Status](https://travis-ci.com/tlux/fl_hook_client.svg?branch=master)](https://travis-ci.org/tlux/fl_hook_client)
+[![Build Status](https://travis-ci.com/tlux/fl_hook_client.svg?branch=master)](https://travis-ci.com/tlux/fl_hook_client)
 [![Coverage Status](https://coveralls.io/repos/github/tlux/fl_hook_client/badge.svg?branch=master)](https://coveralls.io/github/tlux/fl_hook_client?branch=master)
 [![Hex.pm](https://img.shields.io/hexpm/v/fl_hook_client.svg)](https://hex.pm/packages/fl_hook_client)
 
