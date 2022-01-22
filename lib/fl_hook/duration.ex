@@ -25,7 +25,12 @@ defmodule FLHook.Duration do
          {minutes, ""} when minutes in 0..59 <- Integer.parse(minutes),
          {seconds, ""} when seconds in 0..59 <- Integer.parse(seconds) do
       {:ok,
-       %__MODULE__{days: days, hours: hours, minutes: minutes, seconds: seconds}}
+       %__MODULE__{
+         days: days,
+         hours: hours,
+         minutes: minutes,
+         seconds: seconds
+       }}
     else
       _ -> :error
     end

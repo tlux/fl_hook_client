@@ -4,7 +4,13 @@ defmodule FLHook.DurationTest do
   alias FLHook.Duration
 
   describe "parse/1" do
-    test "ok" do
+    test "duration" do
+      duration = %Duration{days: 0, hours: 0, minutes: 0, seconds: 0}
+
+      assert Duration.parse(duration) == {:ok, duration}
+    end
+
+    test "string" do
       assert Duration.parse("0:00:00:00") ==
                {:ok, %Duration{days: 0, hours: 0, minutes: 0, seconds: 0}}
 
@@ -23,6 +29,7 @@ defmodule FLHook.DurationTest do
       assert Duration.parse("0:-01:00:00") == :error
       assert Duration.parse("0:00:-01:00") == :error
       assert Duration.parse("0:00:00:-01") == :error
+      assert Duration.parse(:invalid) == :error
     end
   end
 end
