@@ -64,9 +64,7 @@ defmodule FLHook.ClientTest do
         :ok
       end)
 
-      expect(MockInetAdapter, :setopts, fn ^fake_socket, [active: :once] ->
-        :ok
-      end)
+      expect_socket_set_to_active_once(fake_socket)
 
       client = start_supervised!({Client, config})
 
@@ -101,9 +99,7 @@ defmodule FLHook.ClientTest do
         :ok
       end)
 
-      expect(MockInetAdapter, :setopts, fn ^fake_socket, [active: :once] ->
-        :ok
-      end)
+      expect_socket_set_to_active_once(fake_socket)
 
       opts = [
         backoff_interval: 1234,
@@ -167,9 +163,7 @@ defmodule FLHook.ClientTest do
         :ok
       end)
 
-      expect(MockInetAdapter, :setopts, fn ^fake_socket, [active: :once] ->
-        :ok
-      end)
+      expect_socket_set_to_active_once(fake_socket)
 
       client = start_supervised!({Client, config})
 
@@ -324,9 +318,7 @@ defmodule FLHook.ClientTest do
         :ok
       end)
 
-      expect(MockInetAdapter, :setopts, fn ^fake_socket, _ ->
-        :ok
-      end)
+      expect_socket_set_to_active_once(fake_socket)
 
       client = start_supervised!({Client, config})
 
@@ -369,12 +361,9 @@ defmodule FLHook.ClientTest do
       assert eventually(fn -> command_queued?(client) end)
 
       # Result received
-      expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
-        :ok
-      end)
+      expect_socket_set_to_active_once(socket)
 
-      {:ok, msg} = Codec.encode(:unicode, "OK\r\n")
-      send(client, {:tcp, socket, msg})
+      send_unicode_tcp_message(client, socket, "OK\r\n")
 
       assert {:ok, %Result{lines: []}} = Task.await(task)
     end
@@ -395,12 +384,9 @@ defmodule FLHook.ClientTest do
       assert eventually(fn -> command_queued?(client) end)
 
       # Result received
-      expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
-        :ok
-      end)
+      expect_socket_set_to_active_once(socket)
 
-      {:ok, msg} = Codec.encode(:unicode, "OK\r\n")
-      send(client, {:tcp, socket, msg})
+      send_unicode_tcp_message(client, socket, "OK\r\n")
 
       assert {:ok, %Result{lines: []}} = Task.await(task)
     end
@@ -421,12 +407,13 @@ defmodule FLHook.ClientTest do
       assert eventually(fn -> command_queued?(client) end)
 
       # Result received
-      expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
-        :ok
-      end)
+      expect_socket_set_to_active_once(socket)
 
-      {:ok, msg} = Codec.encode(:unicode, "ERR player not logged in\r\n")
-      send(client, {:tcp, socket, msg})
+      send_unicode_tcp_message(
+        client,
+        socket,
+        "ERR player not logged in\r\n"
+      )
 
       assert Task.await(task) ==
                {:error, %CommandError{detail: "player not logged in"}}
@@ -460,9 +447,7 @@ defmodule FLHook.ClientTest do
         {:error, :econnrefused}
       end)
 
-      expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
-        :ok
-      end)
+      expect_socket_set_to_active_once(socket)
 
       Process.flag(:trap_exit, true)
 
@@ -475,7 +460,7 @@ defmodule FLHook.ClientTest do
 
           eventually(fn -> command_queued?(client) end)
 
-          send(client, {:tcp, socket, "invalid"})
+          send_tcp_message(client, socket, "invalid")
 
           Task.await(task)
         end
@@ -503,9 +488,7 @@ defmodule FLHook.ClientTest do
       assert eventually(fn -> command_queued?(client) end)
 
       # Result received
-      expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
-        :ok
-      end)
+      expect_socket_set_to_active_once(socket)
 
       send(client, :timeout)
 
@@ -648,7 +631,7 @@ defmodule FLHook.ClientTest do
   describe "event handling" do
     setup :stub_successful_connection
 
-    # test ""
+    # TODO
   end
 
   defp stub_successful_connection(%{config: config}) do
@@ -675,14 +658,27 @@ defmodule FLHook.ClientTest do
       :ok
     end)
 
-    expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
-      :ok
-    end)
+    expect_socket_set_to_active_once(socket)
 
     socket
   end
 
   defp command_queued?(client) do
     :queue.len(:sys.get_state(client).mod_state.queue) > 0
+  end
+
+  defp expect_socket_set_to_active_once(socket) do
+    expect(MockInetAdapter, :setopts, fn ^socket, [active: :once] ->
+      :ok
+    end)
+  end
+
+  defp send_unicode_tcp_message(client, socket, msg) do
+    {:ok, msg} = Codec.encode(:unicode, msg)
+    send_tcp_message(client, socket, msg)
+  end
+
+  defp send_tcp_message(client, socket, msg) do
+    send(client, {:tcp, socket, msg})
   end
 end

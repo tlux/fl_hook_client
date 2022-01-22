@@ -1,6 +1,7 @@
 defmodule FLHook.ParamsTest do
   use ExUnit.Case, async: true
 
+  alias FLHook.Duration
   alias FLHook.Params
 
   describe "parse/1" do
@@ -69,7 +70,7 @@ defmodule FLHook.ParamsTest do
 
     test "duration" do
       assert Params.fetch(%{"foo" => "1:23:45:56"}, "foo", :duration) ==
-               {:ok, %{days: 1, hours: 23, minutes: 45, seconds: 56}}
+               {:ok, %Duration{days: 1, hours: 23, minutes: 45, seconds: 56}}
 
       assert Params.fetch(%{"foo" => "1:45:56"}, "foo", :duration) == :error
     end
@@ -127,7 +128,7 @@ defmodule FLHook.ParamsTest do
 
     test "duration" do
       assert Params.fetch!(%{"foo" => "1:23:45:56"}, "foo", :duration) ==
-               %{days: 1, hours: 23, minutes: 45, seconds: 56}
+               %Duration{days: 1, hours: 23, minutes: 45, seconds: 56}
 
       assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
         Params.fetch!(%{"foo" => "1:45:56"}, "foo", :duration)
@@ -177,6 +178,90 @@ defmodule FLHook.ParamsTest do
       assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
         Params.fetch!(%{}, "foo", :string)
       end
+    end
+  end
+
+  describe "boolean!/2" do
+    test "true" do
+      assert Params.boolean!(%{"foo" => "1"}, "foo") == true
+      assert Params.boolean!(%{"foo" => "enabled"}, "foo") == true
+      assert Params.boolean!(%{"foo" => "yes"}, "foo") == true
+      assert Params.boolean!(%{"foo" => "yes"}, :foo) == true
+    end
+
+    test "false" do
+      assert Params.boolean!(%{"foo" => "0"}, "foo") == false
+      assert Params.boolean!(%{"foo" => "no"}, "foo") == false
+      assert Params.boolean!(%{"foo" => "invalid"}, "foo") == false
+    end
+
+    test "param missing" do
+      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+        Params.boolean!(%{}, "foo")
+      end
+    end
+  end
+
+  describe "duration!/2" do
+    test "valid" do
+      assert Params.duration!(%{"foo" => "1:23:45:56"}, "foo") ==
+               %Duration{days: 1, hours: 23, minutes: 45, seconds: 56}
+    end
+
+    test "invalid" do
+      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+        Params.duration!(%{"foo" => "invalid"}, "foo")
+      end
+    end
+
+    test "param missing" do
+      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+        Params.duration!(%{}, "foo")
+      end
+    end
+  end
+
+  describe "float!/2" do
+    test "valid" do
+      assert Params.float!(%{"foo" => "1.2"}, "foo") == 1.2
+      assert Params.float!(%{"foo" => "1.0"}, "foo") == 1.0
+      assert Params.float!(%{"foo" => "1"}, "foo") == 1.0
+    end
+
+    test "invalid" do
+      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+        assert Params.float!(%{"foo" => "invalid"}, "foo") == 1.0
+      end
+    end
+
+    test "param missing" do
+      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+        Params.float!(%{"foo" => "bar"}, "foo")
+      end
+    end
+  end
+
+  describe "integer!/2" do
+    test "valid" do
+      assert Params.integer!(%{"foo" => "2"}, "foo") == 2
+    end
+
+    test "invalid" do
+      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+        Params.integer!(%{"foo" => "bar"}, "foo")
+      end
+    end
+
+    test "param missing" do
+      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+        Params.integer!(%{"foo" => "2.2"}, "foo")
+      end
+    end
+  end
+
+  describe "string!/2" do
+    test "valid" do
+      assert Params.string!(%{"foo" => "bar"}, "foo") == "bar"
     end
   end
 end

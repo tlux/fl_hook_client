@@ -3,6 +3,7 @@ defmodule FLHook.Params do
   A module that provides helpers to decode command response and event params.
   """
 
+  alias FLHook.Duration
   alias FLHook.Utils
 
   @type key :: atom | String.t()
@@ -55,16 +56,7 @@ defmodule FLHook.Params do
   end
 
   def fetch(params, key, :duration) do
-    with {:ok, value} <- fetch(params, key),
-         [days, hours, minutes, seconds] <- String.split(value, ":", parts: 4),
-         {days, ""} <- Integer.parse(days),
-         {hours, ""} <- Integer.parse(hours),
-         {minutes, ""} <- Integer.parse(minutes),
-         {seconds, ""} <- Integer.parse(seconds) do
-      {:ok, %{days: days, hours: hours, minutes: minutes, seconds: seconds}}
-    else
-      _ -> :error
-    end
+    fetch(params, key, Duration)
   end
 
   def fetch(params, key, :float) do
@@ -126,14 +118,7 @@ defmodule FLHook.Params do
   Fetches a param as duration from the params collection. Raises when the param
   is missing or could not be coerced.
   """
-  @spec duration!(params, key) ::
-          %{
-            days: non_neg_integer,
-            hours: non_neg_integer,
-            minutes: non_neg_integer,
-            seconds: non_neg_integer
-          }
-          | no_return
+  @spec duration!(params, key) :: Duration.t() | no_return
   def duration!(params, key) do
     fetch!(params, key, :duration)
   end
