@@ -68,7 +68,8 @@ defmodule FLHook.ClientTest do
 
       client = start_supervised!({Client, config})
 
-      assert eventually(fn -> verify!() end)
+      eventually(fn -> verify!() end)
+
       assert :sys.get_state(client).mod_state.socket == fake_socket
     end
 
@@ -101,25 +102,27 @@ defmodule FLHook.ClientTest do
 
       expect_socket_set_to_active_once(fake_socket)
 
-      opts = [
-        backoff_interval: 1234,
-        codec: :unicode,
-        connect_timeout: 2345,
-        event_mode: false,
-        host: "foo.bar",
-        inet_adapter: MockInetAdapter,
-        name: FLHook.NamedTestClient,
-        password: "$3cret",
-        port: 1920,
-        recv_timeout: 3456,
-        send_timeout: 4567,
-        subscribers: [self()],
-        tcp_adapter: MockTCPAdapter
-      ]
+      client =
+        start_supervised!(
+          {Client,
+           [
+             backoff_interval: 1234,
+             codec: :unicode,
+             connect_timeout: 2345,
+             event_mode: false,
+             host: "foo.bar",
+             inet_adapter: MockInetAdapter,
+             name: FLHook.NamedTestClient,
+             password: "$3cret",
+             port: 1920,
+             recv_timeout: 3456,
+             send_timeout: 4567,
+             subscribers: [self()],
+             tcp_adapter: MockTCPAdapter
+           ]}
+        )
 
-      client = start_supervised!({Client, opts})
-
-      assert eventually(fn -> verify!() end)
+      eventually(fn -> verify!() end)
 
       client_state = :sys.get_state(client)
 
@@ -167,7 +170,8 @@ defmodule FLHook.ClientTest do
 
       client = start_supervised!({Client, config})
 
-      assert eventually(fn -> verify!() end)
+      eventually(fn -> verify!() end)
+
       assert :sys.get_state(client).mod_state.socket == fake_socket
     end
 
@@ -190,9 +194,9 @@ defmodule FLHook.ClientTest do
         {:error, :econnrefused}
       end)
 
-      assert capture_log(fn ->
-               eventually(fn -> verify!() end)
-             end)
+      capture_log(fn ->
+        eventually(fn -> verify!() end)
+      end)
     end
 
     test "handshake error", %{config: config} do
@@ -358,7 +362,7 @@ defmodule FLHook.ClientTest do
           Client.cmd(client, "isloggedin Foobar")
         end)
 
-      assert eventually(fn -> command_queued?(client) end)
+      eventually(fn -> command_queued?(client) end)
 
       # Result received
       expect_socket_set_to_active_once(socket)
@@ -389,6 +393,17 @@ defmodule FLHook.ClientTest do
       send_unicode_tcp_message(client, socket, "OK\r\n")
 
       assert {:ok, %Result{lines: []}} = Task.await(task)
+    end
+
+    test "send error", %{client: client, socket: socket} do
+      {:ok, cmd} = Codec.encode(:unicode, "addcash Foobar 1234\r\n")
+
+      expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
+        {:error, :something_went_wrong}
+      end)
+
+      assert Client.cmd(client, "addcash Foobar 1234") ==
+               {:error, %SocketError{reason: :something_went_wrong}}
     end
 
     test "command error", %{client: client, socket: socket} do
@@ -452,25 +467,25 @@ defmodule FLHook.ClientTest do
       Process.flag(:trap_exit, true)
 
       capture_log(fn ->
-        catch_exit do
-          task =
-            Task.async(fn ->
-              Client.cmd(client, {"addcash", ["Foobar", 1234]})
-            end)
+        cought_exit =
+          catch_exit do
+            task =
+              Task.async(fn ->
+                Client.cmd(client, {"addcash", ["Foobar", 1234]})
+              end)
 
-          eventually(fn -> command_queued?(client) end)
+            eventually(fn -> command_queued?(client) end)
 
-          send_tcp_message(client, socket, "invalid")
+            send_tcp_message(client, socket, "invalid")
 
-          Task.await(task)
-        end
+            Task.await(task)
+          end
 
-        assert_received {:EXIT, _,
-                         {%CodecError{
-                            codec: :unicode,
-                            direction: :decode,
-                            value: "invalid"
-                          }, _}}
+        assert {{%CodecError{
+                   codec: :unicode,
+                   direction: :decode,
+                   value: "invalid"
+                 }, _}, _} = cought_exit
       end)
     end
 
@@ -503,11 +518,86 @@ defmodule FLHook.ClientTest do
       {:ok, client: start_supervised!({Client, config})}
     end
 
-    test "successfully run command"
+    test "successfully run string command", %{client: client, socket: socket} do
+      {:ok, cmd} = Codec.encode(:unicode, "isloggedin Foobar\r\n")
 
-    test "raise command error"
+      # Command sent
+      expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
+        :ok
+      end)
 
-    test "raise connection closed error"
+      task =
+        Task.async(fn ->
+          Client.cmd!(client, "isloggedin Foobar")
+        end)
+
+      eventually(fn -> command_queued?(client) end)
+
+      # Result received
+      expect_socket_set_to_active_once(socket)
+
+      send_unicode_tcp_message(client, socket, "OK\r\n")
+
+      assert %Result{lines: []} = Task.await(task)
+    end
+
+    test "successfully run tuple command", %{client: client, socket: socket} do
+      {:ok, cmd} = Codec.encode(:unicode, "addcash Foobar 1234\r\n")
+
+      # Command sent
+      expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
+        :ok
+      end)
+
+      task =
+        Task.async(fn ->
+          Client.cmd!(client, {"addcash", ["Foobar", 1234]})
+        end)
+
+      assert eventually(fn -> command_queued?(client) end)
+
+      # Result received
+      expect_socket_set_to_active_once(socket)
+
+      send_unicode_tcp_message(client, socket, "OK\r\n")
+
+      assert %Result{lines: []} = Task.await(task)
+    end
+
+    test "raise command error", %{client: client, socket: socket} do
+      {:ok, cmd} = Codec.encode(:unicode, "addcash Foobar 1234\r\n")
+
+      # Command sent
+      expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
+        :ok
+      end)
+
+      test_pid = self()
+
+      task =
+        Task.async(fn ->
+          try do
+            Client.cmd!(client, "addcash Foobar 1234")
+          rescue
+            e -> send(test_pid, e)
+          end
+        end)
+
+      assert eventually(fn -> command_queued?(client) end)
+
+      # Result received
+      expect_socket_set_to_active_once(socket)
+
+      send_unicode_tcp_message(
+        client,
+        socket,
+        "ERR player not logged in\r\n"
+      )
+
+      Task.await(task)
+
+      assert_received %CommandError{detail: "player not logged in"}
+    end
   end
 
   describe "subscribe/2" do
