@@ -17,8 +17,17 @@ defmodule FLHook.MixProject do
         "coveralls.travis": :test
       ],
       dialyzer: [plt_add_apps: [:ex_unit, :mix]],
+      description: description(),
       package: package(),
-      elixirc_paths: elixirc_paths(Mix.env())
+      elixirc_paths: elixirc_paths(Mix.env()),
+
+      # Docs
+      name: "FLHook Client",
+      source_url: "https://github.com/tlux/fl_hook_client",
+      docs: [
+        main: "readme",
+        extras: ["README.md"]
+      ]
     ]
   end
 
@@ -27,6 +36,11 @@ defmodule FLHook.MixProject do
     [
       extra_applications: [:logger]
     ]
+  end
+
+  defp description do
+    "A library that allows connecting to Freelancer game servers via an " <>
+      "FLHook socket to run commands and receive events."
   end
 
   # Run "mix help deps" to learn about dependencies.
