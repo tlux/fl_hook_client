@@ -119,8 +119,7 @@ defmodule FLHook.XMLText do
   defp build_color(color) do
     color
     |> normalize_color()
-    |> Enum.map(&to_hex/1)
-    |> Enum.join()
+    |> Enum.map_join(&to_hex/1)
   end
 
   defguardp is_rgb_value(value) when value in 0..255
