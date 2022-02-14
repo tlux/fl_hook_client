@@ -21,13 +21,14 @@ example.
   - Character Management
   - Character Money Deposit
   - Character Cargo Deposit
-- Location Journal
+- Player Tracking and Travel Journal
 - Custom Cargo Missions
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `fl_hook_client` to your list of dependencies in `mix.exs`:
+The package is [available in Hex](https://hex.pm/packages/fl_hook_client) and
+can be installed by adding `fl_hook_client` to your list of dependencies in
+`mix.exs`:
 
 ```elixir
 def deps do
