@@ -4,6 +4,7 @@ defmodule FLHook.Result do
   contained data.
   """
 
+  alias FLHook.ParamError
   alias FLHook.Params
   alias FLHook.Utils
 
@@ -43,7 +44,8 @@ defmodule FLHook.Result do
   Fetches the param with the specified key from the params collection.
   Optionally allows specification of a type to coerce the param to.
   """
-  @spec param(t, Params.key(), Params.param_type()) :: {:ok, any} | :error
+  @spec param(t, Params.key(), Params.param_type()) ::
+          {:ok, any} | {:error, ParamError.t()}
   def param(%__MODULE__{} = result, key, type \\ :string) do
     result
     |> params()

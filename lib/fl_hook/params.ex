@@ -4,6 +4,7 @@ defmodule FLHook.Params do
   """
 
   alias FLHook.Duration
+  alias FLHook.ParamError
   alias FLHook.Utils
 
   defstruct data: %{}
@@ -49,7 +50,7 @@ defmodule FLHook.Params do
   Fetches the param with the specified key from the params collection.
   Optionally allows specification of a type to coerce the param to.
   """
-  @spec fetch(t, key, param_type) :: {:ok, any} | :error
+  @spec fetch(t, key, param_type) :: {:ok, any} | {:error, ParamError.t()}
   def fetch(params, key, type \\ :string)
 
   def fetch(%__MODULE__{} = params, key, type) when is_atom(key) do
@@ -71,7 +72,7 @@ defmodule FLHook.Params do
          {value, ""} <- Float.parse(value) do
       {:ok, value}
     else
-      _ -> :error
+      _ -> {:error, %ParamError{key: key}}
     end
   end
 
@@ -80,12 +81,14 @@ defmodule FLHook.Params do
          {value, ""} <- Integer.parse(value) do
       {:ok, value}
     else
-      _ -> :error
+      _ -> {:error, %ParamError{key: key}}
     end
   end
 
   def fetch(%__MODULE__{data: data}, key, :string) do
-    Map.fetch(data, key)
+    with :error <- Map.fetch(data, key) do
+      {:error, %ParamError{key: key}}
+    end
   end
 
   def fetch(%__MODULE__{} = params, key, type_mod) when is_atom(type_mod) do
@@ -94,9 +97,11 @@ defmodule FLHook.Params do
       with {:ok, value} <- fetch(params, key),
            {:ok, value} <- type_mod.parse(value) do
         {:ok, value}
+      else
+        _ -> {:error, %ParamError{key: key}}
       end
     else
-      :error
+      {:error, %ParamError{key: key}}
     end
   end
 
@@ -109,7 +114,7 @@ defmodule FLHook.Params do
   def fetch!(%__MODULE__{} = params, key, type \\ :string) do
     case fetch(params, key, type) do
       {:ok, value} -> value
-      :error -> raise ArgumentError, "invalid or missing param (#{key})"
+      {:error, error} -> raise error
     end
   end
 

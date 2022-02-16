@@ -2,6 +2,7 @@ defmodule FLHook.ParamsTest do
   use ExUnit.Case, async: true
 
   alias FLHook.Duration
+  alias FLHook.ParamError
   alias FLHook.Params
 
   describe "new/0" do
@@ -106,7 +107,7 @@ defmodule FLHook.ParamsTest do
                {:ok, %Duration{days: 1, hours: 23, minutes: 45, seconds: 56}}
 
       assert Params.fetch(Params.new(%{"foo" => "1:45:56"}), "foo", :duration) ==
-               :error
+               {:error, %ParamError{key: "foo"}}
     end
 
     test "float" do
@@ -120,7 +121,7 @@ defmodule FLHook.ParamsTest do
                {:ok, 1.0}
 
       assert Params.fetch(Params.new(%{"foo" => "bar"}), "foo", :float) ==
-               :error
+               {:error, %ParamError{key: "foo"}}
     end
 
     test "integer" do
@@ -128,10 +129,10 @@ defmodule FLHook.ParamsTest do
                {:ok, 2}
 
       assert Params.fetch(Params.new(%{"foo" => "bar"}), "foo", :integer) ==
-               :error
+               {:error, %ParamError{key: "foo"}}
 
       assert Params.fetch(Params.new(%{"foo" => "2.2"}), "foo", :integer) ==
-               :error
+               {:error, %ParamError{key: "foo"}}
     end
 
     test "string" do
@@ -152,14 +153,15 @@ defmodule FLHook.ParamsTest do
                "foo",
                FLHook.CustomParamType
              ) ==
-               :error
+               {:error, %ParamError{key: "foo"}}
 
       assert Params.fetch(Params.new(%{"foo" => "bar"}), "foo", :invalid_parser) ==
-               :error
+               {:error, %ParamError{key: "foo"}}
     end
 
     test "error when param missing" do
-      assert Params.fetch(Params.new(%{}), "foo", :string) == :error
+      assert Params.fetch(Params.new(%{}), "foo", :string) ==
+               {:error, %ParamError{key: "foo"}}
     end
   end
 
@@ -199,7 +201,7 @@ defmodule FLHook.ParamsTest do
                :duration
              ) == %Duration{days: 1, hours: 23, minutes: 45, seconds: 56}
 
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         Params.fetch!(Params.new(%{"foo" => "1:45:56"}), "foo", :duration)
       end
     end
@@ -209,7 +211,7 @@ defmodule FLHook.ParamsTest do
       assert Params.fetch!(Params.new(%{"foo" => "1.0"}), "foo", :float) == 1.0
       assert Params.fetch!(Params.new(%{"foo" => "1"}), "foo", :float) == 1.0
 
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         Params.fetch!(Params.new(%{"foo" => "bar"}), "foo", :float)
       end
     end
@@ -217,11 +219,11 @@ defmodule FLHook.ParamsTest do
     test "integer" do
       assert Params.fetch!(Params.new(%{"foo" => "2"}), "foo", :integer) == 2
 
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         Params.fetch!(Params.new(%{"foo" => "bar"}), "foo", :integer) == :error
       end
 
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         Params.fetch!(Params.new(%{"foo" => "2.2"}), "foo", :integer) == :error
       end
     end
@@ -238,7 +240,7 @@ defmodule FLHook.ParamsTest do
                FLHook.CustomParamType
              ) == "BAR"
 
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         Params.fetch!(
           Params.new(%{"foo" => "baz"}),
           "foo",
@@ -246,14 +248,14 @@ defmodule FLHook.ParamsTest do
         )
       end
 
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         Params.fetch!(Params.new(%{"foo" => "bar"}), "foo", :invalid_parser) ==
           :error
       end
     end
 
     test "raise when param missing" do
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         Params.fetch!(Params.new(%{}), "foo", :string)
       end
     end
@@ -274,7 +276,7 @@ defmodule FLHook.ParamsTest do
     end
 
     test "param missing" do
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         Params.boolean!(Params.new(%{}), "foo")
       end
     end
@@ -287,13 +289,13 @@ defmodule FLHook.ParamsTest do
     end
 
     test "invalid" do
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         Params.duration!(Params.new(%{"foo" => "invalid"}), "foo")
       end
     end
 
     test "param missing" do
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         Params.duration!(Params.new(%{}), "foo")
       end
     end
@@ -307,13 +309,13 @@ defmodule FLHook.ParamsTest do
     end
 
     test "invalid" do
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         assert Params.float!(Params.new(%{"foo" => "invalid"}), "foo") == 1.0
       end
     end
 
     test "param missing" do
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         Params.float!(Params.new(%{"foo" => "bar"}), "foo")
       end
     end
@@ -325,13 +327,13 @@ defmodule FLHook.ParamsTest do
     end
 
     test "invalid" do
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         Params.integer!(Params.new(%{"foo" => "bar"}), "foo")
       end
     end
 
     test "param missing" do
-      assert_raise ArgumentError, "invalid or missing param (foo)", fn ->
+      assert_raise ParamError, "invalid or missing param (foo)", fn ->
         Params.integer!(Params.new(%{"foo" => "2.2)"}), "foo")
       end
     end

@@ -4,6 +4,7 @@ defmodule FLHook.Event do
   the server.
   """
 
+  alias FLHook.ParamError
   alias FLHook.Params
 
   @event_types [
@@ -50,7 +51,8 @@ defmodule FLHook.Event do
   Fetches the param with the specified key from the params collection.
   Optionally allows specification of a type to coerce the param to.
   """
-  @spec param(t, Params.key(), Params.param_type()) :: {:ok, any} | :error
+  @spec param(t, Params.key(), Params.param_type()) ::
+          {:ok, any} | {:error, ParamError.t()}
   def param(%__MODULE__{params: params}, key, type \\ :string) do
     Params.fetch(params, key, type)
   end
