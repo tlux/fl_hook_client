@@ -44,4 +44,42 @@ defmodule FLHook.EventTest do
       assert Event.parse("") == :error
     end
   end
+
+  describe "param/2" do
+    test "delegate to Params" do
+      params = Params.new(%{"foo" => "bar"})
+      event = %Event{params: params}
+
+      assert Event.param(event, "foo") == Params.fetch(params, "foo", :string)
+    end
+  end
+
+  describe "param/3" do
+    test "delegate to Params" do
+      params = Params.new(%{"foo" => "1"})
+      event = %Event{params: params}
+
+      assert Event.param(event, "foo", :boolean) ==
+               Params.fetch(params, "foo", :boolean)
+    end
+  end
+
+  describe "param!/2" do
+    test "delegate to Params" do
+      params = Params.new(%{"foo" => "bar"})
+      event = %Event{params: params}
+
+      assert Event.param!(event, "foo") == Params.fetch!(params, "foo", :string)
+    end
+  end
+
+  describe "param!/3" do
+    test "delegate to Params" do
+      params = Params.new(%{"foo" => "1"})
+      event = %Event{params: params}
+
+      assert Event.param!(event, "foo", :boolean) ==
+               Params.fetch!(params, "foo", :boolean)
+    end
+  end
 end

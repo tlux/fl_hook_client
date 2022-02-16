@@ -8,7 +8,7 @@ defmodule FLHook.ResultTest do
 
   @params_result %Result{
     lines: [
-      "foo=bar bar=baz baz=boo",
+      "foo=bar bar=baz baz=1",
       "bar=baz",
       "lorem=ipsum"
     ]
@@ -32,7 +32,7 @@ defmodule FLHook.ResultTest do
                Params.new(%{
                  "foo" => "bar",
                  "bar" => "baz",
-                 "baz" => "boo"
+                 "baz" => "1"
                }),
                Params.new(%{"bar" => "baz"}),
                Params.new(%{"lorem" => "ipsum"})
@@ -46,12 +46,36 @@ defmodule FLHook.ResultTest do
                Params.new(%{
                  "foo" => "bar",
                  "bar" => "baz",
-                 "baz" => "boo"
+                 "baz" => "1"
                })
     end
 
     test "gets empty map when result has no lines" do
       assert Result.params(%{@params_result | lines: []}) == Params.new(%{})
+    end
+  end
+
+  describe "param/2" do
+    test "delegate to Params" do
+      assert Result.param(@params_result, "foo") == {:ok, "bar"}
+    end
+  end
+
+  describe "param/3" do
+    test "delegate to Params" do
+      assert Result.param(@params_result, "baz", :boolean) == {:ok, true}
+    end
+  end
+
+  describe "param!/2" do
+    test "delegate to Params" do
+      assert Result.param!(@params_result, "foo") == "bar"
+    end
+  end
+
+  describe "param!/3" do
+    test "delegate to Params" do
+      assert Result.param!(@params_result, "baz", :boolean) == true
     end
   end
 

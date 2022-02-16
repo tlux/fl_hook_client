@@ -40,6 +40,29 @@ defmodule FLHook.Result do
   end
 
   @doc """
+  Fetches the param with the specified key from the params collection.
+  Optionally allows specification of a type to coerce the param to.
+  """
+  @spec param(t, Params.key(), Params.param_type()) :: {:ok, any} | :error
+  def param(%__MODULE__{} = result, key, type \\ :string) do
+    result
+    |> params()
+    |> Params.fetch(key, type)
+  end
+
+  @doc """
+  Fetches the param with the specified key from the params collection.
+  Optionally allows specification of a type to coerce the param to. Raises when
+  the param is missing or could not be coerced to the given type.
+  """
+  @spec param!(t, Params.key(), Params.param_type()) :: any | no_return
+  def param!(%__MODULE__{} = result, key, type \\ :string) do
+    result
+    |> params()
+    |> Params.fetch!(key, type)
+  end
+
+  @doc """
   Converts the result to a file stream. May raise when the result is no file.
   """
   @spec file_stream!(t) :: Enum.t() | no_return
