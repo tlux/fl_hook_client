@@ -2,6 +2,7 @@ defmodule FLHook.EventTest do
   use ExUnit.Case, async: true
 
   alias FLHook.Event
+  alias FLHook.Params
 
   describe "parse/1" do
     test "parse known event with params" do
@@ -16,12 +17,13 @@ defmodule FLHook.EventTest do
                  {:ok,
                   %Event{
                     type: event_type,
-                    params: %{
-                      "from" => "Player",
-                      "id" => "1337",
-                      "type" => "console",
-                      "text" => "Hello World"
-                    }
+                    params:
+                      Params.new(%{
+                        "from" => "Player",
+                        "id" => "1337",
+                        "type" => "console",
+                        "text" => "Hello World"
+                      })
                   }}
       end)
     end

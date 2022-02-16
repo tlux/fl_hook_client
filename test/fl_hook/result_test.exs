@@ -1,6 +1,7 @@
 defmodule FLHook.ResultTest do
   use ExUnit.Case, async: true
 
+  alias FLHook.Params
   alias FLHook.Result
 
   @result %Result{lines: ["foo", "bar", "baz"]}
@@ -28,28 +29,29 @@ defmodule FLHook.ResultTest do
   describe "params_list/1" do
     test "decodes params from all lines" do
       assert Result.params_list(@params_result) == [
-               %{
+               Params.new(%{
                  "foo" => "bar",
                  "bar" => "baz",
                  "baz" => "boo"
-               },
-               %{"bar" => "baz"},
-               %{"lorem" => "ipsum"}
+               }),
+               Params.new(%{"bar" => "baz"}),
+               Params.new(%{"lorem" => "ipsum"})
              ]
     end
   end
 
   describe "params/1" do
     test "decodes params from first line" do
-      assert Result.params(@params_result) == %{
-               "foo" => "bar",
-               "bar" => "baz",
-               "baz" => "boo"
-             }
+      assert Result.params(@params_result) ==
+               Params.new(%{
+                 "foo" => "bar",
+                 "bar" => "baz",
+                 "baz" => "boo"
+               })
     end
 
     test "gets empty map when result has no lines" do
-      assert Result.params(%{@params_result | lines: []}) == %{}
+      assert Result.params(%{@params_result | lines: []}) == Params.new(%{})
     end
   end
 

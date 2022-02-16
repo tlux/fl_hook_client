@@ -22,7 +22,7 @@ defmodule FLHook.Result do
   @doc """
   Converts a multiline result to a params list.
   """
-  @spec params_list(t) :: [Params.params()]
+  @spec params_list(t) :: [Params.t()]
   def params_list(%__MODULE__{} = result) do
     Enum.map(result.lines, &Params.parse/1)
   end
@@ -31,11 +31,11 @@ defmodule FLHook.Result do
   Converts a result to params. When the result has multiple lines only the first
   one is being processed.
   """
-  @spec params(t) :: Params.params()
+  @spec params(t) :: Params.t()
   def params(%__MODULE__{} = result) do
     case result.lines do
       [line | _] -> Params.parse(line)
-      _ -> %{}
+      _ -> Params.new()
     end
   end
 

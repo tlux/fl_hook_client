@@ -6,15 +6,21 @@ defmodule FLHook.Params do
   alias FLHook.Duration
   alias FLHook.Utils
 
-  @type key :: atom | String.t()
+  defstruct data: %{}
 
-  @type params :: %{optional(String.t()) => String.t()}
+  @type key :: atom | String.t()
+  @type data :: %{optional(String.t()) => String.t()}
+  @type t :: %__MODULE__{data: data}
 
   @type param_type ::
           :boolean | :duration | :integer | :float | :string | module
 
   @doc false
-  @spec parse(String.t(), Keyword.t()) :: params
+  @spec new(data) :: t
+  def new(data \\ %{}), do: %__MODULE__{data: data}
+
+  @doc false
+  @spec parse(String.t(), Keyword.t()) :: t
   def parse(str, opts \\ []) when is_binary(str) do
     str = String.trim_trailing(str, Utils.line_sep())
     str_len = String.length(str)
@@ -36,30 +42,31 @@ defmodule FLHook.Params do
         end
       end
     )
+    |> new()
   end
 
   @doc """
   Fetches the param with the specified key from the params collection.
   Optionally allows specification of a type to coerce the param to.
   """
-  @spec fetch(params, key, param_type) :: {:ok, any} | :error
+  @spec fetch(t, key, param_type) :: {:ok, any} | :error
   def fetch(params, key, type \\ :string)
 
-  def fetch(params, key, type) when is_atom(key) do
+  def fetch(%__MODULE__{} = params, key, type) when is_atom(key) do
     fetch(params, Atom.to_string(key), type)
   end
 
-  def fetch(params, key, :boolean) do
+  def fetch(%__MODULE__{} = params, key, :boolean) do
     with {:ok, value} <- fetch(params, key) do
       {:ok, value in ["1", "yes", "enabled"]}
     end
   end
 
-  def fetch(params, key, :duration) do
+  def fetch(%__MODULE__{} = params, key, :duration) do
     fetch(params, key, Duration)
   end
 
-  def fetch(params, key, :float) do
+  def fetch(%__MODULE__{} = params, key, :float) do
     with {:ok, value} <- fetch(params, key),
          {value, ""} <- Float.parse(value) do
       {:ok, value}
@@ -68,7 +75,7 @@ defmodule FLHook.Params do
     end
   end
 
-  def fetch(params, key, :integer) do
+  def fetch(%__MODULE__{} = params, key, :integer) do
     with {:ok, value} <- fetch(params, key),
          {value, ""} <- Integer.parse(value) do
       {:ok, value}
@@ -77,13 +84,14 @@ defmodule FLHook.Params do
     end
   end
 
-  def fetch(params, key, :string) do
-    Map.fetch(params, key)
+  def fetch(%__MODULE__{data: data}, key, :string) do
+    Map.fetch(data, key)
   end
 
-  def fetch(params, key, type_mod) when is_atom(type_mod) do
-    if Code.ensure_loaded?(type_mod) && function_exported?(type_mod, :parse, 1) do
-      with {:ok, value} <- Map.fetch(params, key),
+  def fetch(%__MODULE__{} = params, key, type_mod) when is_atom(type_mod) do
+    if Code.ensure_loaded?(type_mod) &&
+         function_exported?(type_mod, :parse, 1) do
+      with {:ok, value} <- fetch(params, key),
            {:ok, value} <- type_mod.parse(value) do
         {:ok, value}
       end
@@ -97,8 +105,8 @@ defmodule FLHook.Params do
   Optionally allows specification of a type to coerce the param to. Raises when
   the param is missing or could not be coerced to the given type.
   """
-  @spec fetch!(params, key, param_type) :: any | no_return
-  def fetch!(params, key, type \\ :string) do
+  @spec fetch!(t, key, param_type) :: any | no_return
+  def fetch!(%__MODULE__{} = params, key, type \\ :string) do
     case fetch(params, key, type) do
       {:ok, value} -> value
       :error -> raise ArgumentError, "invalid or missing param (#{key})"
@@ -109,8 +117,8 @@ defmodule FLHook.Params do
   Fetches a param as boolean from the params collection. Raises when the param
   is missing or could not be coerced.
   """
-  @spec boolean!(params, key) :: boolean | no_return
-  def boolean!(params, key) do
+  @spec boolean!(t, key) :: boolean | no_return
+  def boolean!(%__MODULE__{} = params, key) do
     fetch!(params, key, :boolean)
   end
 
@@ -118,8 +126,8 @@ defmodule FLHook.Params do
   Fetches a param as duration from the params collection. Raises when the param
   is missing or could not be coerced.
   """
-  @spec duration!(params, key) :: Duration.t() | no_return
-  def duration!(params, key) do
+  @spec duration!(t, key) :: Duration.t() | no_return
+  def duration!(%__MODULE__{} = params, key) do
     fetch!(params, key, :duration)
   end
 
@@ -127,8 +135,8 @@ defmodule FLHook.Params do
   Fetches a param as float from the params collection. Raises when the param is
   missing or could not be coerced.
   """
-  @spec float!(params, key) :: float | no_return
-  def float!(params, key) do
+  @spec float!(t, key) :: float | no_return
+  def float!(%__MODULE__{} = params, key) do
     fetch!(params, key, :float)
   end
 
@@ -136,8 +144,8 @@ defmodule FLHook.Params do
   Fetches a param as integer from the params collection. Raises when the param
   is missing or could not be coerced.
   """
-  @spec integer!(params, key) :: integer | no_return
-  def integer!(params, key) do
+  @spec integer!(t, key) :: integer | no_return
+  def integer!(%__MODULE__{} = params, key) do
     fetch!(params, key, :integer)
   end
 
@@ -145,8 +153,8 @@ defmodule FLHook.Params do
   Fetches a param as string from the params collection. Raises when the param is
   missing or could not be coerced.
   """
-  @spec string!(params, key) :: String.t() | no_return
-  def string!(params, key) do
+  @spec string!(t, key) :: String.t() | no_return
+  def string!(%__MODULE__{} = params, key) do
     fetch!(params, key, :string)
   end
 end
