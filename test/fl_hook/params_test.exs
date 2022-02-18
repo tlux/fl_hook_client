@@ -413,4 +413,26 @@ defmodule FLHook.ParamsTest do
       assert Params.string!(Params.new(%{"foo" => "bar"}), "foo") == "bar"
     end
   end
+
+  describe "to_map/1" do
+    test "convert to map" do
+      assert Params.to_map(@valid_params) ==
+               Params.to_map(@valid_params, :string)
+    end
+  end
+
+  describe "to_map/2" do
+    test "string key style" do
+      assert Params.to_map(@valid_params, :string) == @valid_params.data
+    end
+
+    test "atom key style" do
+      assert Params.to_map(@valid_params, :atom) == %{
+               bar: "1",
+               baz: "hello",
+               foo: "yes",
+               test: "whatever"
+             }
+    end
+  end
 end
