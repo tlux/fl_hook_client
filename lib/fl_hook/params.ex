@@ -50,6 +50,7 @@ defmodule FLHook.Params do
   Fetches multiple params with the specified keys from the params collection.
   Optionally allows specification of a type to coerce the param to.
   """
+  @doc since: "0.3.0"
   @spec pick(t, [key] | [{key, param_type}]) ::
           {:ok, %{optional(key) => any}} | {:error, ParamError.t()}
   def pick(%__MODULE__{} = params, keys_and_types)
@@ -66,6 +67,21 @@ defmodule FLHook.Params do
 
   defp resolve_key_and_type({key, type}), do: {key, type}
   defp resolve_key_and_type(key), do: {key, :string}
+
+  @doc """
+  Puts multiple params with the specified keys from the params collection in the
+  given struct. Optionally allows specification of a type to coerce the param
+  to.
+  """
+  @doc since: "0.3.0"
+  @spec pick_into(t, module | struct, [key] | [{key, param_type}]) ::
+          {:ok, struct} | {:error, ParamError.t()}
+  def pick_into(%__MODULE__{} = params, target, keys_and_types)
+      when is_list(keys_and_types) do
+    with {:ok, fields} <- pick(params, keys_and_types) do
+      {:ok, struct(target, fields)}
+    end
+  end
 
   @doc """
   Fetches the param with the specified key from the params collection.
@@ -184,6 +200,9 @@ defmodule FLHook.Params do
     fetch!(params, key, :string)
   end
 
+  @doc """
+  Converts the params to a plain map.
+  """
   @doc since: "0.3.0"
   @spec to_map(t, key_style :: :string | :atom) :: map
   def to_map(%__MODULE__{data: data}, key_style \\ :string) do

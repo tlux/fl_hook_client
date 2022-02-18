@@ -500,9 +500,8 @@ defmodule FLHook.Client do
   end
 
   defp cmd_passive(socket, config, cmd) do
-    with :ok <- send_cmd(socket, config, CommandSerializer.to_string(cmd)),
-         {:ok, result} <- read_cmd_result(socket, config) do
-      {:ok, result}
+    with :ok <- send_cmd(socket, config, CommandSerializer.to_string(cmd)) do
+      read_cmd_result(socket, config)
     end
   end
 

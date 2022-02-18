@@ -4,6 +4,14 @@ defmodule FLHook.ParamsTest do
   alias FLHook.Duration
   alias FLHook.ParamError
   alias FLHook.Params
+  alias FLHook.TestParamsStruct
+
+  @valid_params Params.new(%{
+                  "foo" => "yes",
+                  "bar" => "1",
+                  "baz" => "hello",
+                  "test" => "whatever"
+                })
 
   describe "new/0" do
     test "build empty params" do
@@ -262,13 +270,6 @@ defmodule FLHook.ParamsTest do
   end
 
   describe "pick/2" do
-    @valid_params Params.new(%{
-                    "foo" => "yes",
-                    "bar" => "1",
-                    "baz" => "hello",
-                    "test" => "whatever"
-                  })
-
     test "by key" do
       assert Params.pick(@valid_params, ["foo"]) == {:ok, %{"foo" => "yes"}}
       assert Params.pick(@valid_params, [:foo]) == {:ok, %{foo: "yes"}}
@@ -296,6 +297,36 @@ defmodule FLHook.ParamsTest do
 
       assert Params.pick(@valid_params, [:foo, :baz, :invalid]) ==
                {:error, error}
+    end
+  end
+
+  describe "pick_into/3" do
+    test "by key" do
+      assert Params.pick_into(@valid_params, TestParamsStruct, [:foo, :baz]) ==
+               {:ok, %TestParamsStruct{foo: "yes", baz: "hello"}}
+    end
+
+    test "by key and type" do
+      assert Params.pick_into(@valid_params, TestParamsStruct, [
+               :baz,
+               foo: :boolean
+             ]) == {:ok, %TestParamsStruct{baz: "hello", foo: true}}
+    end
+
+    test "error when key not found" do
+      error = %ParamError{key: "invalid"}
+
+      assert Params.pick_into(
+               @valid_params,
+               TestParamsStruct,
+               ~w(foo baz invalid)
+             ) == {:error, error}
+
+      assert Params.pick_into(@valid_params, TestParamsStruct, [
+               :foo,
+               :baz,
+               :invalid
+             ]) == {:error, error}
     end
   end
 
