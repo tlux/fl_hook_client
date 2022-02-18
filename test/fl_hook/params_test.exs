@@ -261,6 +261,44 @@ defmodule FLHook.ParamsTest do
     end
   end
 
+  describe "pick/2" do
+    @valid_params Params.new(%{
+                    "foo" => "yes",
+                    "bar" => "1",
+                    "baz" => "hello",
+                    "test" => "whatever"
+                  })
+
+    test "by key" do
+      assert Params.pick(@valid_params, ["foo"]) == {:ok, %{"foo" => "yes"}}
+      assert Params.pick(@valid_params, [:foo]) == {:ok, %{foo: "yes"}}
+
+      assert Params.pick(@valid_params, [:foo, :baz]) ==
+               {:ok, %{foo: "yes", baz: "hello"}}
+    end
+
+    test "by key and type" do
+      assert Params.pick(@valid_params, [{"foo", :string}]) ==
+               {:ok, %{"foo" => "yes"}}
+
+      assert Params.pick(@valid_params, [{"foo", :boolean}]) ==
+               {:ok, %{"foo" => true}}
+
+      assert Params.pick(@valid_params, [:baz, foo: :boolean]) ==
+               {:ok, %{baz: "hello", foo: true}}
+    end
+
+    test "error when key not found" do
+      error = %ParamError{key: "invalid"}
+
+      assert Params.pick(@valid_params, ~w(foo baz invalid)) ==
+               {:error, error}
+
+      assert Params.pick(@valid_params, [:foo, :baz, :invalid]) ==
+               {:error, error}
+    end
+  end
+
   describe "boolean!/2" do
     test "true" do
       assert Params.boolean!(Params.new(%{"foo" => "1"}), "foo") == true

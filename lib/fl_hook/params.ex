@@ -47,6 +47,27 @@ defmodule FLHook.Params do
   end
 
   @doc """
+  Fetches multiple params with the specified keys from the params collection.
+  Optionally allows specification of a type to coerce the param to.
+  """
+  @spec pick(t, [key] | [{key, param_type}]) ::
+          {:ok, %{optional(key) => any}} | {:error, ParamError.t()}
+  def pick(%__MODULE__{} = params, keys_and_types)
+      when is_list(keys_and_types) do
+    Enum.reduce_while(keys_and_types, {:ok, %{}}, fn key_and_type, {:ok, map} ->
+      {key, type} = resolve_key_and_type(key_and_type)
+
+      case fetch(params, key, type) do
+        {:ok, value} -> {:cont, {:ok, Map.put(map, key, value)}}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp resolve_key_and_type({key, type}), do: {key, type}
+  defp resolve_key_and_type(key), do: {key, :string}
+
+  @doc """
   Fetches the param with the specified key from the params collection.
   Optionally allows specification of a type to coerce the param to.
   """
@@ -162,4 +183,15 @@ defmodule FLHook.Params do
   def string!(%__MODULE__{} = params, key) do
     fetch!(params, key, :string)
   end
+
+  @doc since: "0.3.0"
+  @spec to_map(t, key_style :: :string | :atom) :: map
+  def to_map(%__MODULE__{data: data}, key_style \\ :string) do
+    Map.new(data, fn {key, value} ->
+      {format_map_key(key, key_style), value}
+    end)
+  end
+
+  defp format_map_key(key, :atom), do: String.to_atom(key)
+  defp format_map_key(key, :string), do: key
 end
