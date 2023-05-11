@@ -364,7 +364,7 @@ defmodule FLHook.Client do
 
     case :queue.out(state.queue) do
       {{:value, reply}, new_queue} ->
-        GenServer.reply(
+        Connection.reply(
           reply.client,
           {:error, %SocketError{reason: :timeout}}
         )
@@ -399,7 +399,7 @@ defmodule FLHook.Client do
             {:noreply, %{state | queue: :queue.in_r(reply, new_queue)}}
 
           %{status: :ok} = reply ->
-            GenServer.reply(
+            Connection.reply(
               reply.client,
               {:ok, Reply.to_result(reply)}
             )
