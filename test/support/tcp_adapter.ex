@@ -6,7 +6,7 @@ defmodule FLHook.TCPAdapter do
   @callback connect(
               address :: :inet.socket_address() | :inet.hostname(),
               port :: :inet.port_number(),
-              options :: [:inet.connect_option()],
+              options :: [term],
               timeout
             ) :: {:ok, socket} | {:error, :timeout | :inet.posix()}
 
