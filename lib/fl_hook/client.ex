@@ -10,7 +10,6 @@ defmodule FLHook.Client do
   alias __MODULE__
   alias FLHook.Client.Reply
   alias FLHook.Codec
-  alias FLHook.CodecError
   alias FLHook.CommandError
   alias FLHook.CommandSerializer
   alias FLHook.Config
@@ -28,65 +27,10 @@ defmodule FLHook.Client do
   """
   @type client :: GenServer.server()
 
-  @typedoc """
-  Type describing an error that occurs when a command fails.
-  """
-  @type cmd_error :: CodecError.t() | CommandError.t() | SocketError.t()
-
-  @doc """
-  Connects to a FLHook socket.
-  """
-  @callback start_link(opts :: Keyword.t()) :: GenServer.on_start()
-
-  @doc """
-  Closes the connection to the FLHook socket.
-  """
-  @callback close() :: :ok
-
-  @doc """
-  Determines whether the client is currently connected to a FLHook socket.
-  """
-  @callback connected?() :: boolean
-
-  @doc """
-  Sends a command to the server and returns the result.
-  """
-  @callback cmd(cmd :: FLHook.command()) ::
-              {:ok, Result.t()} | {:error, cmd_error}
-
-  @doc """
-  Sends a command to the server and returns the result. Raises when the command
-  fails.
-  """
-  @callback cmd!(cmd :: FLHook.command()) :: Result.t() | no_return
-
-  @doc """
-  Lets the current process subscribe to events emitted by the FLHook client.
-  """
-  @callback subscribe() :: :ok
-
-  @doc """
-  Lets the specified process subscribe to events emitted by the FLHook client.
-  """
-  @callback subscribe(subscriber :: GenServer.server()) :: :ok
-
-  @doc """
-  Lets the current process unsubscribe from events emitted by the FLHook client.
-  """
-  @callback unsubscribe() :: :ok
-
-  @doc """
-  Lets the specified process unsubscribe from events emitted by the FLHook
-  client.
-  """
-  @callback unsubscribe(subscriber :: GenServer.server()) :: :ok
-
   defmacro __using__(opts) do
     otp_app = Keyword.fetch!(opts, :otp_app)
 
-    quote do
-      @behaviour Client
-
+    quote location: :keep do
       @doc false
       @spec __config__() :: Config.t()
       def __config__ do
@@ -95,7 +39,18 @@ defmodule FLHook.Client do
         |> Config.new()
       end
 
-      @doc false
+      @doc """
+      Starts the FLHook client.
+      """
+      @spec start_link(Keyword.t()) :: GenServer.on_start()
+      def start_link(opts \\ []) do
+        opts = Keyword.put_new(opts, :name, __MODULE__)
+        Client.start_link(__config__(), opts)
+      end
+
+      @doc """
+      Default child specification for the FLHook client.
+      """
       @spec child_spec(term) :: Supervisor.child_spec()
       def child_spec(opts) do
         %{
@@ -104,86 +59,70 @@ defmodule FLHook.Client do
         }
       end
 
-      @impl Client
-      def start_link(opts \\ []) do
-        opts = Keyword.put_new(opts, :name, __MODULE__)
-        Client.start_link(__config__(), opts)
-      end
-
-      @impl Client
-      def close do
-        Client.close(__MODULE__)
-      end
-
-      @impl Client
-      def connected? do
-        Client.connected?(__MODULE__)
-      end
-
-      @impl Client
-      def cmd(cmd) do
-        Client.cmd(__MODULE__, cmd)
-      end
-
-      @impl Client
-      def cmd!(cmd) do
-        Client.cmd!(__MODULE__, cmd)
-      end
-
-      @impl Client
-      def subscribe do
-        Client.subscribe(__MODULE__)
-      end
-
-      @impl Client
-      def subscribe(subscriber) do
-        Client.subscribe(__MODULE__, subscriber)
-      end
-
-      @impl Client
-      def unsubscribe do
-        Client.unsubscribe(__MODULE__)
-      end
-
-      @impl Client
-      def unsubscribe(subscriber) do
-        Client.unsubscribe(__MODULE__, subscriber)
-      end
+      defoverridable child_spec: 1
     end
   end
 
+  @doc """
+  Starts the FLHook client using the given config or options.
+  """
   @spec start_link(Config.t() | Keyword.t()) :: GenServer.on_start()
   def start_link(%Config{} = config) do
     start_link(config, [])
   end
 
   def start_link(opts) when is_list(opts) do
-    {opts, init_opts} = Keyword.split(opts, [:name])
-    config = Config.new(init_opts)
-    start_link(config, opts)
+    {config_opts, start_opts} =
+      Keyword.split(opts, Map.keys(Config.__struct__()))
+
+    config = Config.new(config_opts)
+    start_link(config, start_opts)
   end
 
+  @doc """
+  Starts the FLHook client using the given config and options.
+  """
   @spec start_link(Config.t(), Keyword.t()) :: GenServer.on_start()
   def start_link(%Config{} = config, opts) do
     Connection.start_link(__MODULE__, config, opts)
   end
 
+  @doc """
+  Opens the connection.
+  """
+  @spec open(client) :: :ok | {:error, Exception.t()}
+  def open(client) do
+    Connection.call(client, :open)
+  end
+
+  @doc """
+  Closes the connection.
+  """
   @spec close(client) :: :ok
   def close(client) do
     Connection.call(client, :close)
   end
 
+  @doc """
+  Indicates whether the socket is connected.
+  """
   @spec connected?(client) :: boolean
   def connected?(client) do
     Connection.call(client, :connected?)
   end
 
+  @doc """
+  Sends a command to the socket and returns the result.
+  """
   @spec cmd(client, FLHook.command()) ::
-          {:ok, Result.t()} | {:error, cmd_error}
+          {:ok, Result.t()} | {:error, Exception.t()}
   def cmd(client, cmd) do
     Connection.call(client, {:cmd, CommandSerializer.to_string(cmd)})
   end
 
+  @doc """
+  Sends a command to the socket and returns the result. Raises on error.
+  """
   @spec cmd!(client, FLHook.command()) :: Result.t() | no_return
   def cmd!(client, cmd) do
     case cmd(client, cmd) do
@@ -192,19 +131,27 @@ defmodule FLHook.Client do
     end
   end
 
+  @doc """
+  Registers the specified process as event listener.
+  """
   @spec subscribe(client, GenServer.server()) :: :ok
-  def subscribe(client, subscriber \\ self()) do
-    Connection.call(client, {:subscribe, subscriber})
+  def subscribe(client, listener \\ self()) do
+    Connection.call(client, {:subscribe, listener})
   end
 
+  @doc """
+  Removes the event listener for the specified process.
+  """
   @spec unsubscribe(client, GenServer.server()) :: :ok
-  def unsubscribe(client, subscriber \\ self()) do
-    Connection.call(client, {:unsubscribe, subscriber})
+  def unsubscribe(client, listener \\ self()) do
+    Connection.call(client, {:unsubscribe, listener})
   end
 
   # Child Spec
 
-  @doc false
+  @doc """
+  The child specification for a FLHook client.
+  """
   @spec child_spec(term) :: Supervisor.child_spec()
   def child_spec(opts) do
     %{
@@ -218,29 +165,54 @@ defmodule FLHook.Client do
   @impl true
   def init(config) do
     if config.password do
-      subscriptions =
-        Map.new(config.subscribers, fn subscriber ->
-          {subscriber, Process.monitor(subscriber)}
-        end)
+      state = %{
+        config: config,
+        queue: nil,
+        recv_timeout_ref: nil,
+        socket: nil,
+        listeners: %{}
+      }
 
-      {:connect, nil,
-       %{
-         config: config,
-         queue: nil,
-         recv_timeout_ref: nil,
-         socket: nil,
-         subscriptions: subscriptions
-       }}
+      if config.connect_on_start do
+        {:connect, :init, state}
+      else
+        {:ok, state}
+      end
     else
       {:stop, %ConfigError{message: "No password specified"}}
     end
   end
 
   @impl true
-  def connect(_info, %{config: config} = state) do
+  def connect(info, %{config: config} = state) do
     case socket_connect(config) do
       {:ok, socket} ->
-        after_connect(%{state | queue: :queue.new(), socket: socket})
+        with :ok <- verify_welcome_msg(socket, config),
+             :ok <- authenticate(socket, config),
+             :ok <- event_mode(socket, config) do
+          :ok = config.tcp_adapter.controlling_process(socket, self())
+
+          config.inet_adapter.setopts(socket, active: :once)
+
+          with {:open, from} <- info do
+            Connection.reply(from, :ok)
+          end
+
+          {:ok, %{state | queue: :queue.new(), socket: socket}}
+        else
+          {:error, error} ->
+            config.tcp_adapter.close(socket)
+
+            case info do
+              {:open, from} ->
+                Connection.reply(from, {:error, error})
+
+              _ ->
+                log_error(error, config)
+            end
+
+            {:stop, error, %{state | socket: nil}}
+        end
 
       {:error, error} ->
         log_error(error, config)
@@ -261,12 +233,12 @@ defmodule FLHook.Client do
     case info do
       {:close, from} ->
         Connection.reply(from, :ok)
+        {:noconnect, state}
 
       error ->
         log_error(error, state.config)
+        {:connect, :reconnect, state}
     end
-
-    {:connect, :reconnect, state}
   end
 
   @impl true
@@ -281,6 +253,10 @@ defmodule FLHook.Client do
   @impl true
   def handle_call(:connected?, _from, state) do
     {:reply, !is_nil(state.socket), state}
+  end
+
+  def handle_call(:open, from, state) do
+    {:connect, {:open, from}, state}
   end
 
   def handle_call(:close, from, state) do
@@ -306,27 +282,27 @@ defmodule FLHook.Client do
     end
   end
 
-  def handle_call({:subscribe, subscriber}, _from, state) do
-    subscriptions =
-      Map.put_new_lazy(state.subscriptions, subscriber, fn ->
-        Process.monitor(subscriber)
+  def handle_call({:subscribe, listener}, _from, state) do
+    listeners =
+      Map.put_new_lazy(state.listeners, listener, fn ->
+        Process.monitor(listener)
       end)
 
-    {:reply, :ok, %{state | subscriptions: subscriptions}}
+    {:reply, :ok, %{state | listeners: listeners}}
   end
 
-  def handle_call({:unsubscribe, subscriber}, _from, state) do
-    subscriptions =
-      case Map.pop(state.subscriptions, subscriber) do
-        {nil, subscriptions} ->
-          subscriptions
+  def handle_call({:unsubscribe, listener}, _from, state) do
+    listeners =
+      case Map.pop(state.listeners, listener) do
+        {nil, listeners} ->
+          listeners
 
-        {monitor_ref, subscriptions} ->
-          Process.demonitor(monitor_ref, [:flush])
-          subscriptions
+        {monitor_ref, listeners} ->
+          Process.demonitor(monitor_ref)
+          listeners
       end
 
-    {:reply, :ok, %{state | subscriptions: subscriptions}}
+    {:reply, :ok, %{state | listeners: listeners}}
   end
 
   @impl true
@@ -376,14 +352,14 @@ defmodule FLHook.Client do
     end
   end
 
-  def handle_info({:DOWN, monitor_ref, :process, subscriber, _info}, state) do
-    {^monitor_ref, subscriptions} = Map.pop(state.subscriptions, subscriber)
-    {:noreply, %{state | subscriptions: subscriptions}}
+  def handle_info({:DOWN, monitor_ref, :process, listener, _info}, state) do
+    {^monitor_ref, listeners} = Map.pop(state.listeners, listener)
+    {:noreply, %{state | listeners: listeners}}
   end
 
   defp handle_event(event, state) do
-    Enum.each(state.subscriptions, fn {subscriber, _monitor} ->
-      send(subscriber, event)
+    Enum.each(state.listeners, fn {listener, _monitor} ->
+      send(listener, event)
     end)
 
     {:noreply, state}
@@ -432,21 +408,6 @@ defmodule FLHook.Client do
              config.connect_timeout
            ) do
       {:error, %SocketError{reason: reason}}
-    end
-  end
-
-  defp after_connect(state) do
-    with :ok <- verify_welcome_msg(state),
-         :ok <- authenticate(state),
-         :ok <- event_mode(state) do
-      :ok = state.config.tcp_adapter.controlling_process(state.socket, self())
-      state.config.inet_adapter.setopts(state.socket, active: :once)
-      {:ok, state}
-    else
-      {:error, error} ->
-        state.config.tcp_adapter.close(state.socket)
-        log_error(error, state.config)
-        {:stop, error, %{state | socket: nil}}
     end
   end
 
@@ -505,29 +466,24 @@ defmodule FLHook.Client do
     end
   end
 
-  defp verify_welcome_msg(state) do
-    case read_chunk(state.socket, state.config) do
+  defp verify_welcome_msg(socket, config) do
+    case read_chunk(socket, config) do
       {:ok, @welcome_msg <> _} -> :ok
       {:ok, message} -> {:error, %HandshakeError{actual_message: message}}
       error -> error
     end
   end
 
-  defp authenticate(state) do
-    with {:ok, _} <-
-           cmd_passive(
-             state.socket,
-             state.config,
-             {"pass", [state.config.password]}
-           ) do
+  defp authenticate(socket, config) do
+    with {:ok, _} <- cmd_passive(socket, config, {"pass", [config.password]}) do
       :ok
     end
   end
 
-  defp event_mode(%{config: %{event_mode: false}}), do: :ok
+  defp event_mode(_socket, %Config{event_mode: false}), do: :ok
 
-  defp event_mode(state) do
-    with {:ok, _} <- cmd_passive(state.socket, state.config, "eventmode") do
+  defp event_mode(socket, config) do
+    with {:ok, _} <- cmd_passive(socket, config, "eventmode") do
       :ok
     end
   end

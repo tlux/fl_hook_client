@@ -23,7 +23,6 @@ defmodule FLHook.ConfigTest do
       assert config.port == 1920
       assert config.recv_timeout == 5000
       assert config.send_timeout == 5000
-      assert config.subscribers == []
       assert config.tcp_adapter == :gen_tcp
     end
 
@@ -40,7 +39,6 @@ defmodule FLHook.ConfigTest do
           port: 1919,
           recv_timeout: 3456,
           send_timeout: 4567,
-          subscribers: [self()],
           tcp_adapter: FLHook.MockTCPAdapter
         )
 
@@ -54,7 +52,6 @@ defmodule FLHook.ConfigTest do
       assert config.port == 1919
       assert config.recv_timeout == 3456
       assert config.send_timeout == 4567
-      assert config.subscribers == [self()]
       assert config.tcp_adapter == FLHook.MockTCPAdapter
     end
 

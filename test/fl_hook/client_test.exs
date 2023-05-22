@@ -32,7 +32,6 @@ defmodule FLHook.ClientTest do
          port: 1920,
          recv_timeout: 3456,
          send_timeout: 4567,
-         subscribers: [],
          tcp_adapter: MockTCPAdapter
        )}
   end
@@ -118,7 +117,6 @@ defmodule FLHook.ClientTest do
              port: 1920,
              recv_timeout: 3456,
              send_timeout: 4567,
-             subscribers: [self()],
              tcp_adapter: MockTCPAdapter
            ]}
         )
@@ -637,7 +635,7 @@ defmodule FLHook.ClientTest do
       assert :ok = Client.subscribe(client, test_pid)
 
       assert %{^test_pid => monitor_ref} =
-               :sys.get_state(client).mod_state.subscriptions
+               :sys.get_state(client).mod_state.listeners
 
       assert is_reference(monitor_ref)
     end
@@ -647,10 +645,10 @@ defmodule FLHook.ClientTest do
       client = start_supervised!({Client, config})
 
       assert :ok = Client.subscribe(client, test_pid)
-      subscriptions = :sys.get_state(client).mod_state.subscriptions
+      listeners = :sys.get_state(client).mod_state.listeners
 
       assert :ok = Client.subscribe(client, test_pid)
-      assert :sys.get_state(client).mod_state.subscriptions == subscriptions
+      assert :sys.get_state(client).mod_state.listeners == listeners
     end
   end
 
@@ -659,22 +657,22 @@ defmodule FLHook.ClientTest do
 
     test "remove subscription", %{config: config} do
       test_pid = self()
-      config = %{config | subscribers: [test_pid]}
-
       client = start_supervised!({Client, config})
 
-      assert %{^test_pid => _} = :sys.get_state(client).mod_state.subscriptions
+      :ok = Client.subscribe(client, test_pid)
+
+      assert %{^test_pid => _} = :sys.get_state(client).mod_state.listeners
       assert :ok = Client.unsubscribe(client, test_pid)
-      assert :sys.get_state(client).mod_state.subscriptions == %{}
+      assert :sys.get_state(client).mod_state.listeners == %{}
     end
 
     test "no-op when subscription not found", %{config: config} do
       test_pid = self()
       client = start_supervised!({Client, config})
 
-      assert :sys.get_state(client).mod_state.subscriptions == %{}
+      assert :sys.get_state(client).mod_state.listeners == %{}
       assert :ok = Client.unsubscribe(client, test_pid)
-      assert :sys.get_state(client).mod_state.subscriptions == %{}
+      assert :sys.get_state(client).mod_state.listeners == %{}
     end
   end
 
@@ -724,21 +722,21 @@ defmodule FLHook.ClientTest do
     end
 
     test "subscriber exit", %{config: config} do
-      {:ok, subscriber} =
+      {:ok, listener} =
         Task.start_link(fn ->
           Process.sleep(250)
         end)
 
-      client =
-        start_supervised!({Client, %{config | subscribers: [subscriber]}})
+      client = start_supervised!({Client, config})
+      :ok = Client.subscribe(client, listener)
 
-      assert %{^subscriber => monitor_ref} =
-               :sys.get_state(client).mod_state.subscriptions
+      assert %{^listener => monitor_ref} =
+               :sys.get_state(client).mod_state.listeners
 
       assert is_reference(monitor_ref)
 
       assert eventually(fn ->
-               map_size(:sys.get_state(client).mod_state.subscriptions) == 0
+               map_size(:sys.get_state(client).mod_state.listeners) == 0
              end)
 
       verify!()
