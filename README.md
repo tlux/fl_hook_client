@@ -33,7 +33,7 @@ can be installed by adding `fl_hook_client` to your list of dependencies in
 ```elixir
 def deps do
   [
-    {:fl_hook_client, "~> 0.2"}
+    {:fl_hook_client, "~> 1.0"}
   ]
 end
 ```
@@ -56,7 +56,6 @@ Initiate a connection to a server (with a list of all possible options):
     port: 1920,
     recv_timeout: 3456,
     send_timeout: 4567,
-    subscribers: [self()],
     tcp_adapter: :gen_tcp
   )
 ```
@@ -78,13 +77,13 @@ Additionally, any value is accepted as command argument that implements the
 `FLHook.Command` protocol.
 
 By default, also events from the server will be sent to all subscribed
-processes. You can add a subscription for the current process as follows:
+processes. You can add a listener for the current process as follows:
 
 ```elixir
 FLHook.Client.subscribe(client)
 ```
 
-You can also subscribe other processes:
+You can also register other processes as listeners:
 
 ```elixir
 pid = self()
@@ -143,6 +142,5 @@ MyApp.FLClient.cmd(client, "readcharfile Player1")
 ## Docs
 
 Documentation can be generated with
-[ExDoc](https://github.com/elixir-lang/ex_doc) and published on
-[HexDocs](https://hexdocs.pm). Once published, the docs can be found at
-[https://hexdocs.pm/fl_hook_client](https://hexdocs.pm/fl_hook_client).
+[ExDoc](https://github.com/elixir-lang/ex_doc) and is published on
+[HexDocs](https://hexdocs.pm/fl_hook_client).
