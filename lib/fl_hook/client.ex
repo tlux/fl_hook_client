@@ -82,7 +82,7 @@ defmodule FLHook.Client do
   @doc """
   Starts the FLHook client using the given config and options.
   """
-  @spec start_link(Config.t(), Keyword.t()) :: GenServer.on_start()
+  @spec start_link(Config.t(), GenServer.options()) :: GenServer.on_start()
   def start_link(%Config{} = config, opts) do
     Connection.start_link(__MODULE__, config, opts)
   end
