@@ -8,6 +8,11 @@ defprotocol FLHook.Command do
           | [String.Chars.t()]
           | {String.t(), [String.Chars.t()]}
 
+  @typedoc """
+  Type representing a command.
+  """
+  @type command :: t | serializable
+
   @doc """
   Returns a command string or tuple. It may even return another command except
   itself.

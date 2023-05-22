@@ -4,7 +4,7 @@
   event_mode: false
 )
 
-{:ok, result} = FLHook.Client.cmd(client, {"addcash", ["Truelight", 10]})
+{:ok, result} = FLHook.cmd(client, {"addcash", ["MyUsername", 10]})
 new_cash = FLHook.Result.param!(result, "cash")
 
 IO.puts("New cash: #{new_cash}")

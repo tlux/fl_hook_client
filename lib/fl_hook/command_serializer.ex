@@ -9,7 +9,7 @@ defmodule FLHook.CommandSerializer do
     "\n" => "\\n"
   }
 
-  @spec to_string(FLHook.command()) :: String.t()
+  @spec to_string(Command.command()) :: String.t()
   def to_string({cmd, args}) when is_binary(cmd) and is_list(args) do
     __MODULE__.to_string([cmd | args])
   end

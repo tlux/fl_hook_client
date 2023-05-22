@@ -1,6 +1,6 @@
 defmodule FLHook.Client do
   @moduledoc """
-  A GenServer that connects to a FLHook socket.
+  A client to connect to a FLHook socket.
   """
 
   use Connection
@@ -10,6 +10,7 @@ defmodule FLHook.Client do
   alias __MODULE__
   alias FLHook.Client.Reply
   alias FLHook.Codec
+  alias FLHook.Command
   alias FLHook.CommandError
   alias FLHook.CommandSerializer
   alias FLHook.Config
@@ -111,19 +112,15 @@ defmodule FLHook.Client do
     Connection.call(client, :connected?)
   end
 
-  @doc """
-  Sends a command to the socket and returns the result.
-  """
-  @spec cmd(client, FLHook.command()) ::
+  @doc false
+  @spec cmd(client, Command.command()) ::
           {:ok, Result.t()} | {:error, Exception.t()}
   def cmd(client, cmd) do
     Connection.call(client, {:cmd, CommandSerializer.to_string(cmd)})
   end
 
-  @doc """
-  Sends a command to the socket and returns the result. Raises on error.
-  """
-  @spec cmd!(client, FLHook.command()) :: Result.t() | no_return
+  @doc false
+  @spec cmd!(client, Command.command()) :: Result.t() | no_return
   def cmd!(client, cmd) do
     case cmd(client, cmd) do
       {:ok, result} -> result
@@ -131,18 +128,14 @@ defmodule FLHook.Client do
     end
   end
 
-  @doc """
-  Registers the specified process as event listener.
-  """
-  @spec subscribe(client, GenServer.server()) :: :ok
+  @doc false
+  @spec subscribe(client, pid) :: :ok
   def subscribe(client, listener \\ self()) do
     Connection.call(client, {:subscribe, listener})
   end
 
-  @doc """
-  Removes the event listener for the specified process.
-  """
-  @spec unsubscribe(client, GenServer.server()) :: :ok
+  @doc false
+  @spec unsubscribe(client, pid) :: :ok
   def unsubscribe(client, listener \\ self()) do
     Connection.call(client, {:unsubscribe, listener})
   end
@@ -163,23 +156,23 @@ defmodule FLHook.Client do
   # Callbacks
 
   @impl true
-  def init(config) do
-    if config.password do
-      state = %{
-        config: config,
-        queue: nil,
-        recv_timeout_ref: nil,
-        socket: nil,
-        listeners: %{}
-      }
+  def init(%{password: nil}) do
+    {:stop, %ConfigError{message: "No password specified"}}
+  end
 
-      if config.connect_on_start do
-        {:connect, :init, state}
-      else
-        {:ok, state}
-      end
+  def init(config) do
+    state = %{
+      config: config,
+      queue: nil,
+      recv_timeout_ref: nil,
+      socket: nil,
+      listeners: %{}
+    }
+
+    if config.connect_on_start do
+      {:connect, :init, state}
     else
-      {:stop, %ConfigError{message: "No password specified"}}
+      {:ok, state}
     end
   end
 

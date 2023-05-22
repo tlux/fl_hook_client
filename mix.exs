@@ -103,7 +103,7 @@ defmodule FLHook.MixProject do
   defp package do
     [
       description: description(),
-      exclude_patterns: [~r/\Apriv\/plts/],
+      exclude_patterns: [~r/\Aexamples/, ~r/\Apriv\/plts/],
       licenses: ["MIT"],
       links: %{
         "GitHub" => @github_url
