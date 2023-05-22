@@ -3,6 +3,8 @@ defmodule FLHook.Duration do
   A struct that represents a duration.
   """
 
+  @behaviour FLHook.ParamType
+
   defstruct days: 0, hours: 0, minutes: 0, seconds: 0
 
   @type t :: %__MODULE__{
@@ -12,12 +14,7 @@ defmodule FLHook.Duration do
           seconds: non_neg_integer
         }
 
-  @doc """
-  Parses the given value and returns the duration on success or an error.
-  """
-  @spec parse(t | String.t()) :: {:ok, t} | :error
-  def parse(%__MODULE__{} = duration), do: {:ok, duration}
-
+  @impl true
   def parse(value) when is_binary(value) do
     with [days, hours, minutes, seconds] <- String.split(value, ":", parts: 4),
          {days, ""} when days >= 0 <- Integer.parse(days),
