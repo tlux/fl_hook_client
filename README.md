@@ -1,8 +1,11 @@
 # FLHook Client
 
-[![Build Status](https://app.travis-ci.com/tlux/fl_hook_client.svg?branch=master)](https://app.travis-ci.com/tlux/fl_hook_client)
-[![Coverage Status](https://coveralls.io/repos/github/tlux/fl_hook_client/badge.svg?branch=master)](https://coveralls.io/github/tlux/fl_hook_client?branch=master)
-[![Hex.pm](https://img.shields.io/hexpm/v/fl_hook_client.svg)](https://hex.pm/packages/fl_hook_client)
+[![Build](https://github.com/tlux/fl_hook_client/actions/workflows/elixir.yml/badge.svg)](https://github.com/tlux/fl_hook_client/actions/workflows/elixir.yml)
+[![Coverage Status](https://coveralls.io/repos/github/tlux/fl_hook_client/badge.svg?branch=main)](https://coveralls.io/github/tlux/fl_hook_client?branch=main)
+[![Module Version](https://img.shields.io/hexpm/v/fl_hook_client.svg)](https://hex.pm/packages/fl_hook_client)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/fl_hook_client/)
+[![License](https://img.shields.io/hexpm/l/fl_hook_client.svg)](https://github.com/tlux/fl_hook_client/blob/main/LICENSE.md)
+[![Last Updated](https://img.shields.io/github/last-commit/tlux/fl_hook_client.svg)](https://github.com/tlux/fl_hook_client/commits/main)
 
 [FLHook](https://github.com/DiscoveryGC/FLHook) is a community-managed tool for
 managing [Freelancer](<https://en.wikipedia.org/wiki/Freelancer_(video_game)>)
