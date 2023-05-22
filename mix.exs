@@ -1,11 +1,14 @@
 defmodule FLHook.MixProject do
   use Mix.Project
 
+  @version "1.0.0"
+  @github_url "https://github.com/tlux/fl_hook_client"
+
   def project do
     [
       app: :fl_hook_client,
-      version: "0.2.0",
-      elixir: "~> 1.8",
+      version: @version,
+      elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
@@ -23,7 +26,7 @@ defmodule FLHook.MixProject do
 
       # Docs
       name: "FLHook Client",
-      source_url: "https://github.com/tlux/fl_hook_client",
+      source_url: @github_url,
       docs: [
         main: "readme",
         extras: ["README.md"]
@@ -65,17 +68,17 @@ defmodule FLHook.MixProject do
     ]
   end
 
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
   defp package do
     [
       description: description(),
       exclude_patterns: [~r/\Apriv\/plts/],
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/tlux/fl_hook_client"
+        "GitHub" => @github_url
       }
     ]
   end
-
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
 end
