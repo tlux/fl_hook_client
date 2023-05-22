@@ -198,7 +198,7 @@ defmodule FLHook.ClientTest do
       end)
     end
 
-    test "handshake error", %{config: config} do
+    test "unexpected string on handshake", %{config: config} do
       fake_socket = make_ref()
 
       MockTCPAdapter
@@ -216,11 +216,36 @@ defmodule FLHook.ClientTest do
         {:error, :econnrefused}
       end)
 
-      capture_log(fn ->
-        start_supervised!({Client, config})
+      assert capture_log(fn ->
+               start_supervised!({Client, config})
 
-        eventually(fn -> verify!() end)
-      end) =~ "Socket is not a valid FLHook socket"
+               eventually(fn -> verify!() end)
+             end) =~ "Socket is not a valid FLHook socket"
+    end
+
+    test "handshake error", %{config: config} do
+      fake_socket = make_ref()
+
+      MockTCPAdapter
+      |> expect(:connect, fn _, _, _, _ ->
+        {:ok, fake_socket}
+      end)
+      |> expect(:recv, fn ^fake_socket, _, _ ->
+        {:error, :econnreset}
+      end)
+      |> expect(:close, fn ^fake_socket ->
+        :ok
+      end)
+      # should issue a reconnect
+      |> expect(:connect, fn _, _, _, _ ->
+        {:error, :econnrefused}
+      end)
+
+      assert capture_log(fn ->
+               start_supervised!({Client, config})
+
+               eventually(fn -> verify!() end)
+             end) =~ Exception.message(%SocketError{reason: :econnreset})
     end
 
     test "auth error", %{config: config} do
@@ -295,6 +320,78 @@ defmodule FLHook.ClientTest do
 
                eventually(fn -> verify!() end)
              end) =~ "Command error: insufficient rights"
+    end
+  end
+
+  describe "open/1" do
+    setup :verify_on_exit!
+
+    setup %{config: config} do
+      {:ok, config: %{config | connect_on_start: false}}
+    end
+
+    test "connect", %{config: config} do
+      test_pid = self()
+      fake_socket = make_ref()
+
+      {:ok, pass_cmd} = Codec.encode(:unicode, "pass $3cret\r\n")
+
+      MockTCPAdapter
+      |> expect(:connect, fn 'foo.bar',
+                             1920,
+                             [:binary, active: false, send_timeout: 4567],
+                             2345 ->
+        {:ok, fake_socket}
+      end)
+      |> expect(:recv, fn ^fake_socket, 0, 3456 ->
+        Codec.encode(:unicode, "Welcome to FLHack\r\n")
+      end)
+      |> expect(:send, fn ^fake_socket, ^pass_cmd ->
+        :ok
+      end)
+      |> expect(:recv, fn ^fake_socket, 0, 3456 ->
+        Codec.encode(:unicode, "OK\r\n")
+      end)
+      |> expect(:controlling_process, fn ^fake_socket, pid ->
+        send(test_pid, {:controlling_process, pid})
+        :ok
+      end)
+
+      expect_socket_set_to_active_once(fake_socket)
+
+      client = start_supervised!({Client, config})
+
+      assert Client.open(client) == :ok
+
+      assert :sys.get_state(client).mod_state.socket == fake_socket
+    end
+
+    test "connect error", %{config: config} do
+      expect(MockTCPAdapter, :connect, fn _, _, _, _ ->
+        {:error, :econnrefused}
+      end)
+
+      client = start_supervised!({Client, config})
+
+      assert Client.open(client) ==
+               {:error, %SocketError{reason: :econnrefused}}
+    end
+
+    test "handshake error", %{config: config} do
+      fake_socket = make_ref()
+
+      MockTCPAdapter
+      |> expect(:connect, fn _, _, _, _ ->
+        {:ok, fake_socket}
+      end)
+      |> expect(:recv, fn ^fake_socket, _, _ ->
+        {:error, :econnreset}
+      end)
+      |> expect(:close, fn ^fake_socket -> :ok end)
+
+      client = start_supervised!({Client, config})
+
+      assert Client.open(client) == {:error, %SocketError{reason: :econnreset}}
     end
   end
 

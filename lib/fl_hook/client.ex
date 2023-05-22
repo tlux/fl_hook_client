@@ -202,21 +202,29 @@ defmodule FLHook.Client do
         else
           {:error, error} ->
             config.tcp_adapter.close(socket)
+            state = %{state | socket: nil}
 
             case info do
               {:open, from} ->
                 Connection.reply(from, {:error, error})
+                {:ok, state}
 
               _ ->
                 log_error(error, config)
+                {:stop, error, state}
             end
-
-            {:stop, error, %{state | socket: nil}}
         end
 
       {:error, error} ->
-        log_error(error, config)
-        {:backoff, config.backoff_interval, state}
+        case info do
+          {:open, from} ->
+            Connection.reply(from, {:error, error})
+            {:ok, state}
+
+          _ ->
+            log_error(error, config)
+            {:backoff, config.backoff_interval, state}
+        end
     end
   end
 
