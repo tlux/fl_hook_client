@@ -1,7 +1,7 @@
 defmodule FLHook.MixProject do
   use Mix.Project
 
-  @version "1.0.0"
+  @version "1.0.1"
   @github_url "https://github.com/tlux/fl_hook_client"
 
   def project do
@@ -9,28 +9,25 @@ defmodule FLHook.MixProject do
       app: :fl_hook_client,
       version: @version,
       elixir: "~> 1.14",
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      package: package(),
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
-        coveralls: :test,
         "coveralls.detail": :test,
-        "coveralls.post": :test,
         "coveralls.html": :test,
-        "coveralls.travis": :test
+        "coveralls.post": :test,
+        coveralls: :test,
+        credo: :test,
+        dialyzer: :test,
+        test: :test
       ],
       dialyzer: dialyzer(),
-      description: description(),
-      package: package(),
-      elixirc_paths: elixirc_paths(Mix.env()),
 
       # Docs
       name: "FLHook Client",
-      source_url: @github_url,
-      docs: [
-        main: "readme",
-        extras: ["README.md"]
-      ]
+      docs: docs()
     ]
   end
 
@@ -53,7 +50,7 @@ defmodule FLHook.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.3", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.16", only: :test},
-      {:ex_doc, "~> 0.27", only: :dev},
+      {:ex_doc, "~> 0.29", only: :dev},
       {:liveness, "~> 1.0", only: :test},
       {:mix_audit, "~> 2.1", only: [:dev, :test]},
       {:mox, "~> 1.0", only: :test}
@@ -65,6 +62,38 @@ defmodule FLHook.MixProject do
       plt_add_apps: [:ex_unit],
       plt_add_deps: :app_tree,
       plt_file: {:no_warn, "priv/plts/fl_hook_client.plt"}
+    ]
+  end
+
+  defp docs do
+    [
+      extras: [
+        "LICENSE.md": [title: "License"],
+        "README.md": [title: "Readme"]
+      ],
+      main: "readme",
+      source_url: @github_url,
+      source_ref: "v#{@version}",
+      groups_for_modules: [
+        Client: [
+          FLHook.Config,
+          FLHook.Client
+        ],
+        Commands: [
+          FLHook.Command
+        ],
+        Results: [
+          FLHook.Duration,
+          FLHook.Event,
+          FLHook.Params,
+          FLHook.ParamType,
+          FLHook.Result
+        ],
+        "Encoding & Decoding": [
+          FLHook.Codec,
+          FLHook.XMLText
+        ]
+      ]
     ]
   end
 
