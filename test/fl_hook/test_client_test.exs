@@ -3,7 +3,10 @@ defmodule FLHook.TestClientTest do
 
   alias FLHook.TestClient
 
-  test "start supervised" do
+  test "child specification" do
     start_supervised!(TestClient)
+
+    assert :sys.get_state(TestClient).mod_state.config ==
+             TestClient.__config__()
   end
 end
