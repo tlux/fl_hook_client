@@ -7,7 +7,6 @@ defmodule FLHook.CommandError do
 
   @type t :: %__MODULE__{detail: String.t()}
 
-  @impl true
   def message(error) do
     "Command error: #{error.detail}"
   end

@@ -7,7 +7,6 @@ defmodule FLHook.SocketError do
 
   @type t :: %__MODULE__{reason: :closed | :timeout | :inet.posix()}
 
-  @impl true
   def message(%{reason: :closed}) do
     "Socket error: connection closed"
   end

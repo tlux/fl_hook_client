@@ -7,7 +7,6 @@ defmodule FLHook.ParamError do
 
   @type t :: %__MODULE__{key: String.t()}
 
-  @impl true
   def message(error) do
     "invalid or missing param (#{error.key})"
   end
