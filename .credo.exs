@@ -31,7 +31,12 @@
           "apps/*/test/",
           "apps/*/web/"
         ],
-        excluded: [~r"/_build/", ~r"/deps/", ~r"/node_modules/"]
+        excluded: [
+          ~r"/_build/",
+          ~r"/deps/",
+          ~r"/node_modules/",
+          "test/support/"
+        ]
       },
       #
       # Load and configure plugins here:
