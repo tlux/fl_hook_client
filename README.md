@@ -66,14 +66,14 @@ Initiate a connection to a server (with a list of all possible options):
 Once connected, you can send commands to the server.
 
 ```elixir
-FLHook.Client.cmd(client, "readcharfile Player1")
+FLHook.cmd(client, "readcharfile Player1")
 # => {:ok, %FLHook.Result{lines: ["...", "..."]}}
 ```
 
 Alternatively, you can use the tuple format for commands:
 
 ```elixir
-FLHook.Client.cmd(client, {"readcharfile", ["Player1"]})
+FLHook.cmd(client, {"readcharfile", ["Player1"]})
 ```
 
 Additionally, any value is accepted as command argument that implements the
@@ -83,7 +83,7 @@ By default, also events from the server will be sent to all subscribed
 processes. You can add a listener for the current process as follows:
 
 ```elixir
-FLHook.Client.subscribe(client)
+FLHook.subscribe(client)
 ```
 
 You can also register other processes as listeners:
@@ -92,7 +92,7 @@ You can also register other processes as listeners:
 pid = self()
 
 Task.async(fn ->
-  FLHook.Client.subscribe(client, pid)
+  FLHook.subscribe(client, pid)
 end)
 ```
 
