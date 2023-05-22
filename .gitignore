@@ -22,5 +22,11 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 fl_hook_client-*.tar
 
-/.vscode
-.DS_Store
+# Temporary files, for example, from tests.
+/tmp/
+
+# Ignore ElixirLS files
+/.elixir_ls
+
+# Ignore PLTs
+/priv/plts

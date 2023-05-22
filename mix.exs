@@ -16,7 +16,7 @@ defmodule FLHook.MixProject do
         "coveralls.html": :test,
         "coveralls.travis": :test
       ],
-      dialyzer: [plt_add_apps: [:ex_unit, :mix]],
+      dialyzer: dialyzer(),
       description: description(),
       package: package(),
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -47,17 +47,28 @@ defmodule FLHook.MixProject do
   defp deps do
     [
       {:connection, "~> 1.1"},
-      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.1", only: [:dev, :test], runtime: false},
-      {:excoveralls, "~> 0.14", only: :test},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.3", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.16", only: :test},
       {:ex_doc, "~> 0.27", only: :dev},
       {:liveness, "~> 1.0", only: :test},
+      {:mix_audit, "~> 2.1", only: [:dev, :test]},
       {:mox, "~> 1.0", only: :test}
+    ]
+  end
+
+  defp dialyzer do
+    [
+      plt_add_apps: [:ex_unit],
+      plt_add_deps: :app_tree,
+      plt_file: {:no_warn, "priv/plts/fl_hook_client.plt"}
     ]
   end
 
   defp package do
     [
+      description: description(),
+      exclude_patterns: [~r/\Apriv\/plts/],
       licenses: ["MIT"],
       links: %{
         "GitHub" => "https://github.com/tlux/fl_hook_client"
