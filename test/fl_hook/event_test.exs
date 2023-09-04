@@ -1,8 +1,8 @@
 defmodule FLHook.EventTest do
   use ExUnit.Case, async: true
 
-  alias FLHook.Event
   alias FLHook.Dict
+  alias FLHook.Event
 
   describe "parse/1" do
     test "parse known event with params" do
