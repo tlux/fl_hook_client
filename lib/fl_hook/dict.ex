@@ -13,7 +13,7 @@ defmodule FLHook.Dict do
   @type data :: %{optional(String.t()) => String.t()}
   @type t :: %__MODULE__{data: data}
 
-  @type param_type ::
+  @type field_type ::
           :boolean | :duration | :integer | :float | :string | module
 
   @doc false
@@ -51,7 +51,7 @@ defmodule FLHook.Dict do
   allows specification of a type to coerce the param to.
   """
   @doc since: "0.3.0"
-  @spec pick(t, [key] | [{key, param_type}]) ::
+  @spec pick(t, [key] | [{key, field_type}]) ::
           {:ok, %{optional(key) => any}} | {:error, FieldError.t()}
   def pick(%__MODULE__{} = dict, keys_and_types)
       when is_list(keys_and_types) do
@@ -73,7 +73,7 @@ defmodule FLHook.Dict do
   struct. Optionally allows specification of a type to coerce the param to.
   """
   @doc since: "0.3.0"
-  @spec pick_into(t, module | struct, [key] | [{key, param_type}]) ::
+  @spec pick_into(t, module | struct, [key] | [{key, field_type}]) ::
           {:ok, struct} | {:error, FieldError.t()}
   def pick_into(%__MODULE__{} = dict, target, keys_and_types)
       when is_list(keys_and_types) do
@@ -86,7 +86,7 @@ defmodule FLHook.Dict do
   Fetches the field using the specified key from the dict. Optionally allows
   specification of a type to coerce the param to.
   """
-  @spec fetch(t, key, param_type) :: {:ok, any} | {:error, FieldError.t()}
+  @spec fetch(t, key, field_type) :: {:ok, any} | {:error, FieldError.t()}
   def fetch(dict, key, type \\ :string)
 
   def fetch(%__MODULE__{} = dict, key, type) when is_atom(key) do
@@ -146,7 +146,7 @@ defmodule FLHook.Dict do
   specification of a type to coerce the value to. Raises when the param is
   missing or could not be coerced to the given type.
   """
-  @spec fetch!(t, key, param_type) :: any | no_return
+  @spec fetch!(t, key, field_type) :: any | no_return
   def fetch!(%__MODULE__{} = dict, key, type \\ :string) do
     case fetch(dict, key, type) do
       {:ok, value} -> value
