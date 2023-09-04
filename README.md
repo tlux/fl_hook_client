@@ -36,7 +36,7 @@ can be installed by adding `fl_hook_client` to your list of dependencies in
 ```elixir
 def deps do
   [
-    {:fl_hook_client, "~> 1.0"}
+    {:fl_hook_client, "~> 2.0"}
   ]
 end
 ```
