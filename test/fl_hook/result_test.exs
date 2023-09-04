@@ -1,12 +1,12 @@
 defmodule FLHook.ResultTest do
   use ExUnit.Case, async: true
 
-  alias FLHook.Params
+  alias FLHook.Dict
   alias FLHook.Result
 
   @result %Result{lines: ["foo", "bar", "baz"]}
 
-  @params_result %Result{
+  @result_with_data %Result{
     lines: [
       "foo=bar bar=baz baz=1",
       "bar=baz",
@@ -26,24 +26,24 @@ defmodule FLHook.ResultTest do
     end
   end
 
-  describe "params_list/1" do
-    test "decodes params from all lines" do
-      assert Result.params_list(@params_result) == [
-               Params.new(%{
+  describe "all/1" do
+    test "decodes data from all lines" do
+      assert Result.all(@result_with_data) == [
+               Dict.new(%{
                  "foo" => "bar",
                  "bar" => "baz",
                  "baz" => "1"
                }),
-               Params.new(%{"bar" => "baz"}),
-               Params.new(%{"lorem" => "ipsum"})
+               Dict.new(%{"bar" => "baz"}),
+               Dict.new(%{"lorem" => "ipsum"})
              ]
     end
   end
 
-  describe "params/1" do
-    test "decodes params from first line" do
-      assert Result.params(@params_result) ==
-               Params.new(%{
+  describe "one/1" do
+    test "decodes data from first line" do
+      assert Result.one(@result_with_data) ==
+               Dict.new(%{
                  "foo" => "bar",
                  "bar" => "baz",
                  "baz" => "1"
@@ -51,31 +51,7 @@ defmodule FLHook.ResultTest do
     end
 
     test "gets empty map when result has no lines" do
-      assert Result.params(%{@params_result | lines: []}) == Params.new(%{})
-    end
-  end
-
-  describe "param/2" do
-    test "delegate to Params" do
-      assert Result.param(@params_result, "foo") == {:ok, "bar"}
-    end
-  end
-
-  describe "param/3" do
-    test "delegate to Params" do
-      assert Result.param(@params_result, "baz", :boolean) == {:ok, true}
-    end
-  end
-
-  describe "param!/2" do
-    test "delegate to Params" do
-      assert Result.param!(@params_result, "foo") == "bar"
-    end
-  end
-
-  describe "param!/3" do
-    test "delegate to Params" do
-      assert Result.param!(@params_result, "baz", :boolean) == true
+      assert Result.one(%{@result_with_data | lines: []}) == Dict.new(%{})
     end
   end
 
@@ -91,7 +67,7 @@ defmodule FLHook.ResultTest do
 
     test "raises argument error when result is not a file" do
       assert_raise ArgumentError, "result is not a file", fn ->
-        @params_result
+        @result_with_data
         |> Result.file_stream!()
         |> Stream.run()
       end
@@ -107,7 +83,7 @@ defmodule FLHook.ResultTest do
 
     test "raises argument error when result is not a file" do
       assert_raise ArgumentError, "result is not a file", fn ->
-        Result.file!(@params_result)
+        Result.file!(@result_with_data)
       end
     end
   end

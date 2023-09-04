@@ -3,7 +3,7 @@ defmodule FLHook.Duration do
   A struct that represents a duration.
   """
 
-  @behaviour FLHook.ParamType
+  @behaviour FLHook.FieldType
 
   defstruct days: 0, hours: 0, minutes: 0, seconds: 0
 

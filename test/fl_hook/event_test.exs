@@ -1,8 +1,8 @@
 defmodule FLHook.EventTest do
   use ExUnit.Case, async: true
 
+  alias FLHook.Dict
   alias FLHook.Event
-  alias FLHook.Params
 
   describe "parse/1" do
     test "parse known event with params" do
@@ -17,8 +17,8 @@ defmodule FLHook.EventTest do
                  {:ok,
                   %Event{
                     type: event_type,
-                    params:
-                      Params.new(%{
+                    dict:
+                      Dict.new(%{
                         "from" => "Player",
                         "id" => "1337",
                         "type" => "console",
@@ -42,44 +42,6 @@ defmodule FLHook.EventTest do
 
     test "error on empty payload" do
       assert Event.parse("") == :error
-    end
-  end
-
-  describe "param/2" do
-    test "delegate to Params" do
-      params = Params.new(%{"foo" => "bar"})
-      event = %Event{params: params}
-
-      assert Event.param(event, "foo") == Params.fetch(params, "foo", :string)
-    end
-  end
-
-  describe "param/3" do
-    test "delegate to Params" do
-      params = Params.new(%{"foo" => "1"})
-      event = %Event{params: params}
-
-      assert Event.param(event, "foo", :boolean) ==
-               Params.fetch(params, "foo", :boolean)
-    end
-  end
-
-  describe "param!/2" do
-    test "delegate to Params" do
-      params = Params.new(%{"foo" => "bar"})
-      event = %Event{params: params}
-
-      assert Event.param!(event, "foo") == Params.fetch!(params, "foo", :string)
-    end
-  end
-
-  describe "param!/3" do
-    test "delegate to Params" do
-      params = Params.new(%{"foo" => "1"})
-      event = %Event{params: params}
-
-      assert Event.param!(event, "foo", :boolean) ==
-               Params.fetch!(params, "foo", :boolean)
     end
   end
 end

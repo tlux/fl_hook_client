@@ -5,6 +5,10 @@
 )
 
 {:ok, result} = FLHook.cmd(client, {"addcash", ["MyUsername", 10]})
-new_cash = FLHook.Result.param!(result, "cash")
+
+new_cash =
+  result
+  |> FLHook.Result.one()
+  |> FLHook.Dict.fetch!("cash", :integer)
 
 IO.puts("New cash: #{new_cash}")
