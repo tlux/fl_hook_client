@@ -21,7 +21,7 @@ defmodule FLHook.Event do
     "switchout"
   ]
 
-  defstruct [:type, params: %{}]
+  defstruct [:type, params: %Params{}]
 
   @type t :: %__MODULE__{
           type: String.t(),
