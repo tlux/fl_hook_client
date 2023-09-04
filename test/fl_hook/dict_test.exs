@@ -14,17 +14,17 @@ defmodule FLHook.DictTest do
               })
 
   describe "new/0" do
-    test "build empty params" do
+    test "build empty dict" do
       assert Dict.new() == %Dict{data: %{}}
     end
   end
 
   describe "new/1" do
-    test "build empty params" do
+    test "build empty dict" do
       assert Dict.new(%{}) == %Dict{data: %{}}
     end
 
-    test "build populated params" do
+    test "build populated dict" do
       data = %{"id" => "123", "name" => "Truelight"}
       assert Dict.new(data) == %Dict{data: data}
     end
@@ -79,9 +79,9 @@ defmodule FLHook.DictTest do
 
   describe "fetch/2" do
     test "delegates to fetch/3 with string type" do
-      params = Dict.new(%{"foo" => "bar"})
+      dict = Dict.new(%{"foo" => "bar"})
 
-      assert Dict.fetch(params, "foo") == Dict.fetch(params, "foo", :string)
+      assert Dict.fetch(dict, "foo") == Dict.fetch(dict, "foo", :string)
     end
   end
 
@@ -175,10 +175,10 @@ defmodule FLHook.DictTest do
 
   describe "fetch!/2" do
     test "delegates to fetch!/3 with string type" do
-      params = Dict.new(%{"foo" => "bar"})
+      dict = Dict.new(%{"foo" => "bar"})
 
-      assert Dict.fetch!(params, "foo") ==
-               Dict.fetch!(params, "foo", :string)
+      assert Dict.fetch!(dict, "foo") ==
+               Dict.fetch!(dict, "foo", :string)
     end
   end
 
@@ -266,6 +266,60 @@ defmodule FLHook.DictTest do
       assert_raise FieldError, "invalid or missing field (foo)", fn ->
         Dict.fetch!(Dict.new(%{}), "foo", :string)
       end
+    end
+  end
+
+  describe "get/2" do
+    test "found" do
+      dict = Dict.new(%{"foo" => "bar"})
+
+      assert Dict.get(dict, "foo") == "bar"
+    end
+
+    test "not found" do
+      dict = Dict.new()
+
+      assert Dict.get(dict, "foo") == nil
+    end
+  end
+
+  describe "get/3" do
+    test "found and type valid" do
+      dict = Dict.new(%{"foo" => "1234"})
+
+      assert Dict.get(dict, "foo", :integer) == 1234
+    end
+
+    test "found and type invalid" do
+      dict = Dict.new(%{"foo" => "1234"})
+
+      assert Dict.get(dict, "foo", :duration) == nil
+    end
+
+    test "not found" do
+      dict = Dict.new()
+
+      assert Dict.get(dict, "foo", :integer) == nil
+    end
+  end
+
+  describe "get/4" do
+    test "found and type valid" do
+      dict = Dict.new(%{"foo" => "1234"})
+
+      assert Dict.get(dict, "foo", :integer, "bar") == 1234
+    end
+
+    test "found and type invalid" do
+      dict = Dict.new(%{"foo" => "1234"})
+
+      assert Dict.get(dict, "foo", :duration, "bar") == "bar"
+    end
+
+    test "not found" do
+      dict = Dict.new()
+
+      assert Dict.get(dict, "foo", :integer, "bar") == "bar"
     end
   end
 

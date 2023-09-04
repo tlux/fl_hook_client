@@ -24,7 +24,7 @@ defmodule FLHook.Event do
 
   @type t :: %__MODULE__{
           type: String.t(),
-          dict: Data.t()
+          dict: Dict.t()
         }
 
   @doc false
