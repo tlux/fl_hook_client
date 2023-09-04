@@ -12,7 +12,7 @@ defmodule FLHook.ClientIntegrationTest do
     client = start_client!()
 
     assert {:ok, %Result{} = result} = Client.cmd(client, "serverinfo")
-    assert %{"uptime" => _} = Result.params(result)
+    assert %{"uptime" => _} = Result.all(result)
 
     assert {:ok, _} = Client.cmd(client, {"msgu", ["Hello FLHook!"]})
   end

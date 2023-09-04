@@ -1,4 +1,4 @@
-defmodule FLHook.ParamError do
+defmodule FLHook.FieldError do
   @moduledoc """
   An error indicating an invalid or missing param.
   """
@@ -8,6 +8,6 @@ defmodule FLHook.ParamError do
   @type t :: %__MODULE__{key: String.t()}
 
   def message(error) do
-    "invalid or missing param (#{error.key})"
+    "invalid or missing field (#{error.key})"
   end
 end

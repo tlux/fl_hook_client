@@ -1,7 +1,7 @@
 defmodule FLHook.MixProject do
   use Mix.Project
 
-  @version "1.0.1"
+  @version "2.0.0"
   @github_url "https://github.com/tlux/fl_hook_client"
 
   def project do
@@ -83,10 +83,10 @@ defmodule FLHook.MixProject do
           FLHook.Command
         ],
         Results: [
+          FLHook.Dict,
           FLHook.Duration,
           FLHook.Event,
-          FLHook.Params,
-          FLHook.ParamType,
+          FLHook.FieldType,
           FLHook.Result
         ],
         "Encoding & Decoding": [

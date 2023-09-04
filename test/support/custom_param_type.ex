@@ -1,5 +1,5 @@
-defmodule FLHook.CustomParamType do
-  @behaviour FLHook.ParamType
+defmodule FLHook.CustomFieldType do
+  @behaviour FLHook.FieldType
 
   def parse("bar"), do: {:ok, "BAR"}
   def parse("baz"), do: :error
