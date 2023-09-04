@@ -104,7 +104,7 @@ The received events have the following format:
 iex> flush()
 %FLHook.Event{
   type: "launch",
-  dict: %FLHook.Dict{"system" => "Li01", "char" => "Player"}
+  dict: %FLHook.Dict{data: "system" => "Li01", "char" => "Player"}
 }
 ```
 
