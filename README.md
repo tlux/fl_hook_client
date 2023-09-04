@@ -102,7 +102,10 @@ The received events have the following format:
 
 ```elixir
 iex> flush()
-%FLHook.Event{type: "launch", params: %{"system" => "Li01", "char" => "Player"}}
+%FLHook.Event{
+  type: "launch",
+  dict: %FLHook.Dict{"system" => "Li01", "char" => "Player"}
+}
 ```
 
 Generally, it is recommended to start the client as part of your supervision

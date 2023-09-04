@@ -69,8 +69,8 @@ defmodule FLHook do
       FLHook.subscribe(client)
 
       receive do
-        %FLHook.Event{type: "kill", params: params} ->
-          IO.inspect(params, label: "player killed")
+        %FLHook.Event{type: "kill", dict: dict} ->
+          IO.inspect(dict, label: "player killed")
       end
   """
 
