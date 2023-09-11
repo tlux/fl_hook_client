@@ -66,7 +66,7 @@ defmodule FLHook.Dict do
   end
 
   defp resolve_key_and_type({key, type}), do: {key, type}
-  defp resolve_key_and_type(key), do: {key, :string}
+  defp resolve_key_and_type(key), do: {key, :any}
 
   @doc """
   Puts multiple fields using the specified keys from the dict into the given
