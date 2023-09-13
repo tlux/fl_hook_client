@@ -54,12 +54,19 @@ defmodule FLHook.Result do
   end
 
   @doc """
+  Gets the raw result string.
+  """
+  @doc since: "2.1.0"
+  @spec raw(t) :: binary
+  def raw(%__MODULE__{} = result) do
+    Enum.join(result.lines, Utils.line_sep())
+  end
+
+  @doc """
   Converts the result to a string.
   """
   @spec to_string(t) :: String.t()
-  def to_string(%__MODULE__{} = result) do
-    Enum.join(result.lines, Utils.line_sep())
-  end
+  def to_string(%__MODULE__{} = result), do: raw(result)
 
   defimpl String.Chars do
     defdelegate to_string(result), to: FLHook.Result
