@@ -4,7 +4,12 @@
   event_mode: false
 )
 
-{:ok, result} = FLHook.cmd(client, {"addcash", ["MyUsername", 10]})
+char = System.fetch_env!("CHAR")
+
+{:ok, result} = FLHook.cmd(
+  client,
+  {"addcash", [char, String.to_integer(System.fetch_env!("CASH"))]}
+)
 
 new_cash =
   result
