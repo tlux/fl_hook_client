@@ -4,15 +4,6 @@ defmodule FLHook.Client.ReplyTest do
   alias FLHook.Client.Reply
   alias FLHook.Result
 
-  describe "lines/1" do
-    assert Reply.lines(%Reply{lines: ["baz", "bar", "", "foo"]}) == [
-             "foo",
-             "",
-             "bar",
-             "baz"
-           ]
-  end
-
   describe "add_chunk/2" do
     test "OK reply" do
       reply =

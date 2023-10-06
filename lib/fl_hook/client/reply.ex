@@ -13,11 +13,6 @@ defmodule FLHook.Client.Reply do
           status: :pending | :ok | {:error, String.t()}
         }
 
-  @spec lines(t) :: [binary]
-  def lines(%__MODULE__{} = reply) do
-    Enum.reverse(reply.lines)
-  end
-
   @spec add_chunk(t, binary) :: t
   def add_chunk(%__MODULE__{status: :pending} = reply, chunk) do
     data = [reply.chardata, chunk]
@@ -45,6 +40,6 @@ defmodule FLHook.Client.Reply do
 
   @spec to_result(t) :: Result.t()
   def to_result(%__MODULE__{status: :ok} = reply) do
-    %Result{lines: lines(reply)}
+    %Result{lines: Enum.reverse(reply.lines)}
   end
 end
