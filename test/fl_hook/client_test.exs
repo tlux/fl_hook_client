@@ -44,7 +44,7 @@ defmodule FLHook.ClientTest do
       {:ok, pass_cmd} = Codec.encode(:unicode, "pass $3cret\r\n")
 
       MockTCPAdapter
-      |> expect(:connect, fn 'foo.bar',
+      |> expect(:connect, fn ~c"foo.bar",
                              1920,
                              [:binary, active: false, send_timeout: 4567],
                              2345 ->
@@ -80,7 +80,7 @@ defmodule FLHook.ClientTest do
       {:ok, pass_cmd} = Codec.encode(:unicode, "pass $3cret\r\n")
 
       MockTCPAdapter
-      |> expect(:connect, fn 'foo.bar',
+      |> expect(:connect, fn ~c"foo.bar",
                              1920,
                              [:binary, active: false, send_timeout: 4567],
                              2345 ->
@@ -139,7 +139,7 @@ defmodule FLHook.ClientTest do
       {:ok, eventmode_cmd} = Codec.encode(:unicode, "eventmode\r\n")
 
       MockTCPAdapter
-      |> expect(:connect, fn 'foo.bar',
+      |> expect(:connect, fn ~c"foo.bar",
                              1920,
                              [:binary, active: false, send_timeout: 4567],
                              2345 ->
@@ -337,7 +337,7 @@ defmodule FLHook.ClientTest do
       {:ok, pass_cmd} = Codec.encode(:unicode, "pass $3cret\r\n")
 
       MockTCPAdapter
-      |> expect(:connect, fn 'foo.bar',
+      |> expect(:connect, fn ~c"foo.bar",
                              1920,
                              [:binary, active: false, send_timeout: 4567],
                              2345 ->
