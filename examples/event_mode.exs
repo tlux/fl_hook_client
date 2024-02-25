@@ -1,9 +1,9 @@
-{:ok, client} = FLHook.Client.start_link(
-  host: System.get_env("FLHOST", "localhost"),
-  password: System.fetch_env!("FLPASS"),
-  event_mode: true
-)
-
+{:ok, client} =
+  FLHook.Client.start_link(
+    host: System.get_env("FLHOST", "localhost"),
+    password: System.fetch_env!("FLPASS"),
+    event_mode: true
+  )
 
 defmodule EventListener do
   def listen do

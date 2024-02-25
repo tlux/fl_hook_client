@@ -1,18 +1,18 @@
-{:ok, client} = FLHook.Client.start_link(
-  host: System.get_env("FLHOST", "localhost"),
-  password: System.fetch_env!("FLPASS"),
-  event_mode: false
-)
-
-char = System.fetch_env!("CHAR")
-
-{:ok, result} = FLHook.cmd(
-  client,
-  {"addcash", [char, String.to_integer(System.fetch_env!("CASH"))]}
-)
+{:ok, client} =
+  FLHook.Client.start_link(
+    host: System.get_env("FLHOST", "localhost"),
+    password: System.fetch_env!("FLPASS")
+  )
 
 new_cash =
-  result
+  client
+  |> FLHook.cmd!(
+    {"addcash",
+     [
+       System.fetch_env!("CHAR"),
+       String.to_integer(System.fetch_env!("CASH"))
+     ]}
+  )
   |> FLHook.Result.one()
   |> FLHook.Dict.fetch!("cash", :integer)
 
