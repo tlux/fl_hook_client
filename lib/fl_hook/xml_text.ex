@@ -2,6 +2,9 @@ defmodule FLHook.XMLText do
   @moduledoc """
   The XML text module allows composing formatted text to be sent via a chat
   command.
+
+  A full reference can be found here:
+  https://docs.flhook.org/md_docs__usage__x_m_l__text__reference.html
   """
 
   require Bitwise
@@ -35,6 +38,8 @@ defmodule FLHook.XMLText do
            blue :: non_neg_integer}
           | String.t()
 
+  @type align :: :left | :center | :right
+
   @type flag ::
           :bold
           | :italic
@@ -50,13 +55,17 @@ defmodule FLHook.XMLText do
   Creates a new XML text struct with the specified content.
   """
   @spec new([
-          {:format, color}
+          {:align, align}
+          | {:format, color}
           | {:format, color, flag | [flag]}
           | {:text, String.Chars.t()}
           | String.Chars.t()
         ]) :: t
   def new(nodes \\ []) do
     Enum.reduce(nodes, %__MODULE__{}, fn
+      {:align, align}, xml_text ->
+        align(xml_text, align)
+
       {:format, color}, xml_text ->
         format(xml_text, color)
 
@@ -69,6 +78,15 @@ defmodule FLHook.XMLText do
       text, xml_text ->
         text(xml_text, text)
     end)
+  end
+
+  @doc """
+  Adds an alignment node to the specified XML text struct.
+  """
+  @spec align(t, align) :: t
+  def align(%__MODULE__{} = xml_text, align)
+      when align in [:left, :center, :right] do
+    %{xml_text | chardata: [xml_text.chardata, ~s(<JUST loc="#{align}"/>)]}
   end
 
   @doc """
@@ -88,9 +106,8 @@ defmodule FLHook.XMLText do
   """
   @spec text(t, String.Chars.t()) :: t
   def text(%__MODULE__{} = xml_text, text) do
-    text = text |> Kernel.to_string() |> Utils.map_chars(@char_map)
-    node = "<TEXT>#{text}</TEXT>"
-    %{xml_text | chardata: [xml_text.chardata, node]}
+    text = text |> String.Chars.to_string() |> Utils.map_chars(@char_map)
+    %{xml_text | chardata: [xml_text.chardata, "<TEXT>#{text}</TEXT>"]}
   end
 
   @doc """
