@@ -87,6 +87,7 @@ defmodule FLHook.XMLText do
   @doc """
   Adds an alignment node to the specified XML text struct.
   """
+  @doc since: "2.1.0"
   @spec align(t, align) :: t
   def align(%__MODULE__{} = xml_text, align)
       when align in [:left, :center, :right] do
@@ -107,6 +108,7 @@ defmodule FLHook.XMLText do
   @doc """
   Adds a paragraph node to the specified XML text struct.
   """
+  @doc since: "2.1.0"
   @spec paragraph(t) :: t
   def paragraph(%__MODULE__{} = xml_text) do
     add_node(xml_text, "<PARA/>")
