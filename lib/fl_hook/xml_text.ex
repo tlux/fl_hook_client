@@ -58,11 +58,15 @@ defmodule FLHook.XMLText do
           {:align, align}
           | {:format, color}
           | {:format, color, flag | [flag]}
+          | :paragraph
           | {:text, String.Chars.t()}
           | String.Chars.t()
         ]) :: t
   def new(nodes \\ []) do
     Enum.reduce(nodes, %__MODULE__{}, fn
+      :paragraph, xml_text ->
+        paragraph(xml_text)
+
       {:align, align}, xml_text ->
         align(xml_text, align)
 
@@ -86,7 +90,7 @@ defmodule FLHook.XMLText do
   @spec align(t, align) :: t
   def align(%__MODULE__{} = xml_text, align)
       when align in [:left, :center, :right] do
-    %{xml_text | chardata: [xml_text.chardata, ~s(<JUST loc="#{align}"/>)]}
+    add_node(xml_text, ~s(<JUST loc="#{align}"/>))
   end
 
   @doc """
@@ -97,8 +101,15 @@ defmodule FLHook.XMLText do
   def format(%__MODULE__{} = xml_text, color, flags \\ []) do
     color = build_color(color)
     flags = build_flags(flags)
-    node = ~s(<TRA data="0x#{color}#{flags}" mask="-1"/>)
-    %{xml_text | chardata: [xml_text.chardata, node]}
+    add_node(xml_text, ~s(<TRA data="0x#{color}#{flags}" mask="-1"/>))
+  end
+
+  @doc """
+  Adds a paragraph node to the specified XML text struct.
+  """
+  @spec paragraph(t) :: t
+  def paragraph(%__MODULE__{} = xml_text) do
+    add_node(xml_text, "<PARA/>")
   end
 
   @doc """
@@ -107,7 +118,7 @@ defmodule FLHook.XMLText do
   @spec text(t, String.Chars.t()) :: t
   def text(%__MODULE__{} = xml_text, text) do
     text = text |> String.Chars.to_string() |> Utils.map_chars(@char_map)
-    %{xml_text | chardata: [xml_text.chardata, "<TEXT>#{text}</TEXT>"]}
+    add_node(xml_text, "<TEXT>#{text}</TEXT>")
   end
 
   @doc """
@@ -116,6 +127,10 @@ defmodule FLHook.XMLText do
   @spec to_string(t) :: String.t()
   def to_string(%__MODULE__{} = xml_text) do
     IO.chardata_to_string(xml_text.chardata)
+  end
+
+  defp add_node(xml_text, node) do
+    %{xml_text | chardata: [xml_text.chardata, node]}
   end
 
   defp build_flags(flags) do

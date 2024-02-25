@@ -20,6 +20,10 @@ defmodule FLHook.XMLTextTest do
                  1337,
                  {:format, "#FF0000", :small},
                  {:text, "!"},
+                 {:align, :left},
+                 {:align, :center},
+                 :paragraph,
+                 {:align, :right},
                  {:format, "00ff00", [:big, :bold]},
                  {:text, "!"}
                ])
@@ -31,8 +35,29 @@ defmodule FLHook.XMLTextTest do
                  ~s(<TEXT>1337</TEXT>) <>
                  ~s(<TRA data="0x0000FF90" mask="-1"/>) <>
                  ~s(<TEXT>!</TEXT>) <>
+                 ~s(<JUST loc="left"/>) <>
+                 ~s(<JUST loc="center"/>) <>
+                 ~s(<PARA/>) <>
+                 ~s(<JUST loc="right"/>) <>
                  ~s(<TRA data="0x00FF0009" mask="-1"/>) <>
                  ~s(<TEXT>!</TEXT>)
+    end
+  end
+
+  describe "align/2" do
+    test "add left node" do
+      assert XMLText.to_string(XMLText.align(%XMLText{}, :left)) ==
+               ~s(<JUST loc="left"/>)
+    end
+
+    test "add center node" do
+      assert XMLText.to_string(XMLText.align(%XMLText{}, :center)) ==
+               ~s(<JUST loc="center"/>)
+    end
+
+    test "add right node" do
+      assert XMLText.to_string(XMLText.align(%XMLText{}, :right)) ==
+               ~s(<JUST loc="right"/>)
     end
   end
 
@@ -120,6 +145,12 @@ defmodule FLHook.XMLTextTest do
       assert_raise ArgumentError, "invalid format flag (:little)", fn ->
         XMLText.format(%XMLText{}, {52, 200, 189}, [:big, :little])
       end
+    end
+  end
+
+  describe "paragraph/1" do
+    test "add paragraph node" do
+      assert XMLText.to_string(XMLText.paragraph(%XMLText{})) == "<PARA/>"
     end
   end
 
