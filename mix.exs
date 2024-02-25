@@ -48,12 +48,12 @@ defmodule FLHook.MixProject do
     [
       {:connection, "~> 1.1"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.3", only: [:dev, :test], runtime: false},
-      {:excoveralls, "~> 0.16", only: :test},
-      {:ex_doc, "~> 0.29", only: :dev},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test},
+      {:ex_doc, "~> 0.31", only: :dev},
       {:liveness, "~> 1.0", only: :test},
       {:mix_audit, "~> 2.1", only: [:dev, :test]},
-      {:mox, "~> 1.0", only: :test}
+      {:mox, "~> 1.1", only: :test}
     ]
   end
 
