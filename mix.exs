@@ -46,6 +46,8 @@ defmodule FLHook.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      # needed for excoveralls
+      {:castore, "~> 1.0", only: :test},
       {:connection, "~> 1.1"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
