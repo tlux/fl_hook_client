@@ -405,4 +405,9 @@ defmodule FLHook.DictTest do
              }
     end
   end
+
+  test "Kernel.inspect/1" do
+    assert inspect(@valid_dict) ==
+             "FLHook.Dict.new(#{inspect(@valid_dict.data)})"
+  end
 end

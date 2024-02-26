@@ -185,4 +185,12 @@ defmodule FLHook.Dict do
 
   defp format_map_key(key, :atom), do: String.to_atom(key)
   defp format_map_key(key, :string), do: key
+
+  defimpl Inspect do
+    import Inspect.Algebra
+
+    def inspect(dict, opts) do
+      concat(["FLHook.Dict.new(", to_doc(FLHook.Dict.to_map(dict), opts), ")"])
+    end
+  end
 end
