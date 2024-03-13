@@ -113,16 +113,16 @@ defmodule FLHook.Client do
   end
 
   @doc false
-  @spec cmd(client, Command.command()) ::
+  @spec cmd(client, Command.command(), timeout) ::
           {:ok, Result.t()} | {:error, Exception.t()}
-  def cmd(client, cmd) do
-    Connection.call(client, {:cmd, CommandSerializer.to_string(cmd)})
+  def cmd(client, cmd, timeout \\ :infinity) do
+    Connection.call(client, {:cmd, CommandSerializer.to_string(cmd)}, timeout)
   end
 
   @doc false
-  @spec cmd!(client, Command.command()) :: Result.t() | no_return
-  def cmd!(client, cmd) do
-    case cmd(client, cmd) do
+  @spec cmd!(client, Command.command(), timeout) :: Result.t() | no_return
+  def cmd!(client, cmd, timeout \\ :infinity) do
+    case cmd(client, cmd, timeout) do
       {:ok, result} -> result
       {:error, error} -> raise error
     end
@@ -338,18 +338,15 @@ defmodule FLHook.Client do
 
   def handle_info(:timeout, state) do
     maybe_cancel_timer(state.recv_timeout_ref)
+    error = %SocketError{reason: :timeout}
 
     case :queue.out(state.queue) do
       {{:value, reply}, new_queue} ->
-        Connection.reply(
-          reply.client,
-          {:error, %SocketError{reason: :timeout}}
-        )
-
-        {:noreply, %{state | queue: new_queue, recv_timeout_ref: nil}}
+        Connection.reply(reply.client, {:error, error})
+        {:disconnect, error, %{state | queue: new_queue, recv_timeout_ref: nil}}
 
       {:empty, _} ->
-        {:noreply, state}
+        {:disconnect, error, state}
     end
   end
 
