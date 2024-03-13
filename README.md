@@ -79,7 +79,7 @@ FLHook.cmd(client, {"readcharfile", ["Player1"]})
 Additionally, any value is accepted as command argument that implements the
 `FLHook.Command` protocol.
 
-By default, also events from the server will be sent to all subscribed
+By setting `event_mode: true`, server events will be sent to all subscribed
 processes. You can add a listener for the current process as follows:
 
 ```elixir
