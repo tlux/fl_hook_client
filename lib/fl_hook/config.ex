@@ -5,6 +5,7 @@ defmodule FLHook.Config do
 
   alias FLHook.Codec
 
+  @enforce_keys [:password]
   defstruct [
     :password,
     backoff_interval: 1000,

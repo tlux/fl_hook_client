@@ -3,15 +3,9 @@ defmodule FLHook.ConfigTest do
 
   alias FLHook.Config
 
-  describe "new/0" do
-    test "defaults" do
-      assert Config.new() == Config.new([])
-    end
-  end
-
   describe "new/1" do
     test "defaults" do
-      config = Config.new([])
+      config = Config.new(password: "test")
 
       assert config.backoff_interval == 1000
       assert config.codec == :unicode
@@ -19,7 +13,7 @@ defmodule FLHook.ConfigTest do
       assert config.event_mode == false
       assert config.host == "localhost"
       assert config.inet_adapter == :inet
-      assert config.password == nil
+      assert config.password == "test"
       assert config.port == 1920
       assert config.recv_timeout == 5000
       assert config.send_timeout == 5000

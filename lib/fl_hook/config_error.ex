@@ -3,5 +3,6 @@ defmodule FLHook.ConfigError do
   An error that indicates that configuration of the client is invalid.
   """
 
+  @enforce_keys [:message]
   defexception [:message]
 end

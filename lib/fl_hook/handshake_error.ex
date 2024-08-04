@@ -6,6 +6,8 @@ defmodule FLHook.HandshakeError do
 
   defexception [:actual_message]
 
+  @type t :: %__MODULE__{actual_message: term}
+
   def message(_error) do
     "Socket is not a valid FLHook socket"
   end

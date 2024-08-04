@@ -5,6 +5,7 @@ defmodule FLHook.CodecError do
 
   alias FLHook.Codec
 
+  @enforce_keys [:direction, :codec, :value]
   defexception [:direction, :codec, :value]
 
   @type t :: %__MODULE__{

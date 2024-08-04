@@ -20,7 +20,7 @@ defmodule FLHook.Event do
     "switchout"
   ]
 
-  @enforce_keys [:type, :dict]
+  @enforce_keys [:type]
   defstruct [:type, dict: %Dict{}]
 
   @type t :: %__MODULE__{

@@ -3,6 +3,7 @@ defmodule FLHook.FieldError do
   An error indicating an invalid or missing param.
   """
 
+  @enforce_keys [:key]
   defexception [:key]
 
   @type t :: %__MODULE__{key: String.t()}

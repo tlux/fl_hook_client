@@ -3,6 +3,7 @@ defmodule FLHook.CommandError do
   An error indicating a command returned unsuccessfully.
   """
 
+  @enforce_keys [:detail]
   defexception [:detail]
 
   @type t :: %__MODULE__{detail: String.t()}
