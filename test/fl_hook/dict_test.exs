@@ -163,8 +163,9 @@ defmodule FLHook.DictTest do
              ) ==
                {:error, %FieldError{key: "foo"}}
 
-      assert Dict.fetch(Dict.new(%{"foo" => "bar"}), "foo", :invalid_parser) ==
-               {:error, %FieldError{key: "foo"}}
+      assert_raise ArgumentError, fn ->
+        assert Dict.fetch(Dict.new(%{"foo" => "bar"}), "foo", :invalid_parser)
+      end
     end
 
     test "error when param missing" do
@@ -256,7 +257,7 @@ defmodule FLHook.DictTest do
         )
       end
 
-      assert_raise FieldError, "invalid or missing field (foo)", fn ->
+      assert_raise ArgumentError, fn ->
         Dict.fetch!(Dict.new(%{"foo" => "bar"}), "foo", :invalid_parser) ==
           :error
       end

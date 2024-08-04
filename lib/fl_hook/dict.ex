@@ -3,6 +3,7 @@ defmodule FLHook.Dict do
   A module that provides helpers to decode command response and event data.
   """
 
+  alias FLHook.Coercer
   alias FLHook.Duration
   alias FLHook.FieldError
   alias FLHook.Utils
@@ -12,9 +13,6 @@ defmodule FLHook.Dict do
   @type key :: atom | String.t()
   @type data :: %{optional(String.t()) => String.t()}
   @type t :: %__MODULE__{data: data}
-
-  @type field_type ::
-          :any | :boolean | :duration | :integer | :float | :string | module
 
   @doc false
   @spec new(data) :: t
@@ -51,7 +49,7 @@ defmodule FLHook.Dict do
   allows specification of a type to coerce the param to.
   """
   @doc since: "0.3.0"
-  @spec pick(t, [key] | [{key, field_type}]) ::
+  @spec pick(t, [key] | [{key, Coercer.type()}]) ::
           {:ok, %{optional(key) => any}} | {:error, FieldError.t()}
   def pick(%__MODULE__{} = dict, keys_and_types)
       when is_list(keys_and_types) do
@@ -73,7 +71,7 @@ defmodule FLHook.Dict do
   struct. Optionally allows specification of a type to coerce the param to.
   """
   @doc since: "0.3.0"
-  @spec pick_into(t, module | struct, [key] | [{key, field_type}]) ::
+  @spec pick_into(t, module | struct, [key] | [{key, Coercer.type()}]) ::
           {:ok, struct} | {:error, FieldError.t()}
   def pick_into(%__MODULE__{} = dict, target, keys_and_types)
       when is_list(keys_and_types) do
@@ -86,64 +84,19 @@ defmodule FLHook.Dict do
   Fetches the field using the specified key from the dict. Optionally allows
   specification of a type to coerce the param to.
   """
-  @spec fetch(t, key, field_type) :: {:ok, any} | {:error, FieldError.t()}
+  @spec fetch(t, key, Coercer.type()) :: {:ok, any} | {:error, FieldError.t()}
   def fetch(dict, key, type \\ :any)
 
   def fetch(%__MODULE__{} = dict, key, type) when is_atom(key) do
     fetch(dict, Atom.to_string(key), type)
   end
 
-  def fetch(%__MODULE__{data: data}, key, :any) do
-    with :error <- Map.fetch(data, key) do
-      {:error, %FieldError{key: key}}
-    end
-  end
-
-  def fetch(%__MODULE__{} = dict, key, :boolean) do
-    with {:ok, value} <- fetch(dict, key) do
-      {:ok, value in ["1", "yes", "enabled"]}
-    end
-  end
-
-  def fetch(%__MODULE__{} = dict, key, :duration) do
-    fetch(dict, key, Duration)
-  end
-
-  def fetch(%__MODULE__{} = dict, key, :float) do
-    with {:ok, value} <- fetch(dict, key),
-         {value, ""} <- Float.parse(value) do
-      {:ok, value}
+  def fetch(%__MODULE__{data: data}, key, type) do
+    with {:ok, value} <- Map.fetch(data, key),
+         {:ok, coerced} <- Coercer.coerce(type, value) do
+      {:ok, coerced}
     else
-      _ -> {:error, %FieldError{key: key}}
-    end
-  end
-
-  def fetch(%__MODULE__{} = dict, key, :integer) do
-    with {:ok, value} <- fetch(dict, key),
-         {value, ""} <- Integer.parse(value) do
-      {:ok, value}
-    else
-      _ -> {:error, %FieldError{key: key}}
-    end
-  end
-
-  def fetch(%__MODULE__{} = dict, key, :string) do
-    with {:ok, value} <- fetch(dict, key) do
-      {:ok, to_string(value)}
-    end
-  end
-
-  def fetch(%__MODULE__{} = dict, key, type_mod) when is_atom(type_mod) do
-    if Code.ensure_loaded?(type_mod) &&
-         function_exported?(type_mod, :parse, 1) do
-      with {:ok, value} <- fetch(dict, key),
-           {:ok, value} <- type_mod.parse(value) do
-        {:ok, value}
-      else
-        _ -> {:error, %FieldError{key: key}}
-      end
-    else
-      {:error, %FieldError{key: key}}
+      :error -> {:error, %FieldError{key: key}}
     end
   end
 
@@ -152,7 +105,7 @@ defmodule FLHook.Dict do
   specification of a type to coerce the value to. Raises when the param is
   missing or could not be coerced to the given type.
   """
-  @spec fetch!(t, key, field_type) :: any | no_return
+  @spec fetch!(t, key, Coercer.type()) :: any | no_return
   def fetch!(%__MODULE__{} = dict, key, type \\ :any) do
     case fetch(dict, key, type) do
       {:ok, value} -> value
@@ -163,6 +116,7 @@ defmodule FLHook.Dict do
   @doc """
   Gets the field using the specified key from the dict.
   """
+  @spec get(t, key, Coercer.type(), any) :: any
   def get(%__MODULE__{} = dict, key, type \\ :any, default \\ nil) do
     case fetch(dict, key, type) do
       {:ok, value} -> value

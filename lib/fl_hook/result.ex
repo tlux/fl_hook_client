@@ -35,6 +35,7 @@ defmodule FLHook.Result do
   @doc """
   Converts the result to a file stream. Raises when the result is no file.
   """
+  @deprecated "Use `FLHook.Charfile` instead"
   @spec file_stream!(t) :: Enum.t() | no_return
   def file_stream!(%__MODULE__{} = result) do
     Stream.map(result.lines, fn
@@ -46,6 +47,7 @@ defmodule FLHook.Result do
   @doc """
   Converts the result to a file string. Raises when the result is no file.
   """
+  @deprecated "Use `FLHook.Charfile` instead"
   @spec file!(t) :: String.t() | no_return
   def file!(%__MODULE__{} = result) do
     result
