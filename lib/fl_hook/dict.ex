@@ -1,10 +1,9 @@
 defmodule FLHook.Dict do
   @moduledoc """
-  A module that provides helpers to decode command response and event data.
+  A dictionary that is returned as command result by a FLHook socket.
   """
 
   alias FLHook.Coercer
-  alias FLHook.Duration
   alias FLHook.FieldError
   alias FLHook.Utils
 
@@ -50,7 +49,7 @@ defmodule FLHook.Dict do
   """
   @doc since: "0.3.0"
   @spec pick(t, [key] | [{key, Coercer.type()}]) ::
-          {:ok, %{optional(key) => any}} | {:error, FieldError.t()}
+          {:ok, %{optional(key) => any}} | {:error, Exception.t()}
   def pick(%__MODULE__{} = dict, keys_and_types)
       when is_list(keys_and_types) do
     Enum.reduce_while(keys_and_types, {:ok, %{}}, fn key_and_type, {:ok, map} ->
@@ -72,7 +71,7 @@ defmodule FLHook.Dict do
   """
   @doc since: "0.3.0"
   @spec pick_into(t, module | struct, [key] | [{key, Coercer.type()}]) ::
-          {:ok, struct} | {:error, FieldError.t()}
+          {:ok, struct} | {:error, Exception.t()}
   def pick_into(%__MODULE__{} = dict, target, keys_and_types)
       when is_list(keys_and_types) do
     with {:ok, fields} <- pick(dict, keys_and_types) do
@@ -84,7 +83,7 @@ defmodule FLHook.Dict do
   Fetches the field using the specified key from the dict. Optionally allows
   specification of a type to coerce the param to.
   """
-  @spec fetch(t, key, Coercer.type()) :: {:ok, any} | {:error, FieldError.t()}
+  @spec fetch(t, key, Coercer.type()) :: {:ok, any} | {:error, Exception.t()}
   def fetch(dict, key, type \\ :any)
 
   def fetch(%__MODULE__{} = dict, key, type) when is_atom(key) do
@@ -139,12 +138,4 @@ defmodule FLHook.Dict do
 
   defp format_map_key(key, :atom), do: String.to_atom(key)
   defp format_map_key(key, :string), do: key
-
-  defimpl Inspect do
-    import Inspect.Algebra
-
-    def inspect(dict, opts) do
-      concat(["FLHook.Dict.new(", to_doc(FLHook.Dict.to_map(dict), opts), ")"])
-    end
-  end
 end
