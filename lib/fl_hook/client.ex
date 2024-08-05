@@ -17,7 +17,6 @@ defmodule FLHook.Client do
   alias FLHook.ConfigError
   alias FLHook.Event
   alias FLHook.HandshakeError
-  alias FLHook.Result
   alias FLHook.SocketError
   alias FLHook.Utils
 

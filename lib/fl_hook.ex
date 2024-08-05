@@ -76,7 +76,6 @@ defmodule FLHook do
 
   alias FLHook.Client
   alias FLHook.Command
-  alias FLHook.Result
 
   @doc """
   Sends a command to the socket and returns the result.
