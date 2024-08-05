@@ -114,13 +114,13 @@ defmodule FLHook.Client do
 
   @doc false
   @spec cmd(client, Command.command(), timeout) ::
-          {:ok, Result.t()} | {:error, Exception.t()}
+          {:ok, [binary]} | {:error, Exception.t()}
   def cmd(client, cmd, timeout \\ :infinity) do
     Connection.call(client, {:cmd, CommandSerializer.to_string(cmd)}, timeout)
   end
 
   @doc false
-  @spec cmd!(client, Command.command(), timeout) :: Result.t() | no_return
+  @spec cmd!(client, Command.command(), timeout) :: [binary] | no_return
   def cmd!(client, cmd, timeout \\ :infinity) do
     case cmd(client, cmd, timeout) do
       {:ok, result} -> result

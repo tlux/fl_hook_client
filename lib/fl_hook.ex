@@ -83,7 +83,7 @@ defmodule FLHook do
   """
   @doc since: "1.0.1"
   @spec cmd(Client.client(), Command.command()) ::
-          {:ok, Result.t()} | {:error, Exception.t()}
+          {:ok, [binary]} | {:error, Exception.t()}
   defdelegate cmd(client, cmd, timeout \\ :infinity), to: Client
 
   @doc """
@@ -91,7 +91,7 @@ defmodule FLHook do
   """
   @doc since: "1.0.1"
   @spec cmd!(Client.client(), Command.command(), timeout) ::
-          Result.t() | no_return
+          [binary] | no_return
   defdelegate cmd!(client, cmd, timeout \\ :infinity), to: Client
 
   @doc """
