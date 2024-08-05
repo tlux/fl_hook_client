@@ -104,11 +104,20 @@ defmodule FLHook.Client do
   end
 
   @doc """
-  Indicates whether the socket is connected.
+  Determines whether the socket is connected.
   """
   @spec connected?(client) :: boolean
   def connected?(client) do
     Connection.call(client, :connected?)
+  end
+
+  @doc """
+  Determines whether the client is in event mode.
+  """
+  @doc since: "3.0.0"
+  @spec event_mode?(client) :: boolean
+  def event_mode?(client) do
+    Connection.call(client, :event_mode?)
   end
 
   @doc false
@@ -253,6 +262,10 @@ defmodule FLHook.Client do
   @impl true
   def handle_call(:connected?, _from, state) do
     {:reply, !is_nil(state.socket), state}
+  end
+
+  def handle_call(:event_mode?, _from, state) do
+    {:reply, state.config.event_mode, state}
   end
 
   def handle_call(:open, from, state) do
