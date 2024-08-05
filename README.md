@@ -17,6 +17,8 @@ a Freelancer Server. This library provides an Elixir client for that matter. You
 could use it to build web-based management interfaces or ingame chat bots, for
 example.
 
+> :warning: **FYI:** The client is only tested with FLHook Version 2.1, later versions may not work.
+
 ## Use Cases
 
 - Chat Bots
@@ -104,7 +106,7 @@ The received events have the following format:
 iex> flush()
 %FLHook.Event{
   type: "launch",
-  dict: %FLHook.Dict{data: "system" => "Li01", "char" => "Player"}
+  dict: %FLHook.Dict{data: %{"system" => "Li01", "char" => "Player"}}
 }
 ```
 
