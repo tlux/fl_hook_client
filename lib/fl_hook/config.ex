@@ -9,7 +9,7 @@ defmodule FLHook.Config do
   defstruct [
     :password,
     backoff_interval: 1000,
-    codec: :unicode,
+    codec: FLHook.Codecs.UTF16LE,
     connect_on_start: true,
     connect_timeout: 5000,
     event_mode: false,

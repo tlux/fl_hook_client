@@ -4,8 +4,6 @@ defmodule FLHook.Event do
   the server.
   """
 
-  alias FLHook.Dict
-
   @event_types [
     "baseenter",
     "baseexit",
@@ -21,26 +19,31 @@ defmodule FLHook.Event do
   ]
 
   @enforce_keys [:type]
-  defstruct [:type, dict: %Dict{}]
+  defstruct [:type, data: %{}]
+
+  @type event_type :: String.t()
 
   @type t :: %__MODULE__{
-          type: String.t(),
-          dict: Dict.t()
+          type: event_type,
+          data: map
         }
 
   @doc false
-  @spec __event_types__() :: [String.t()]
+  @spec __event_types__() :: [event_type]
   def __event_types__, do: @event_types
 
   @doc false
-  @spec parse(String.t()) :: {:ok, t} | :error
+  @spec parse(binary) :: {:ok, t} | :error
   def parse(""), do: :error
 
   def parse(payload) when is_binary(payload) do
     case String.split(payload, " ", parts: 2) do
-      [type, raw_dict] when type in @event_types ->
-        dict = Dict.parse(raw_dict, spread: "text")
-        {:ok, %__MODULE__{type: type, dict: dict}}
+      [type, binary] when type in @event_types ->
+        {:ok,
+         %__MODULE__{
+           type: type,
+           data: FLHook.Dict.parse(binary, spread: "text")
+         }}
 
       _ ->
         :error

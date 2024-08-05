@@ -1,18 +1,9 @@
 defmodule FLHook.Coercible do
   @moduledoc """
-  A behaviour that can be implemented by custom coercer modules.
+  A behaviour that can be implemented by custom coercer modules that can be
+  passed to `FLHook.Coercer.coerce/2`.
   """
-  @moduledoc since: "2.2.0"
+  @moduledoc since: "3.0.0"
 
-  @callback parse(String.t()) :: {:ok, any} | :error
-end
-
-# Remove this with version 3.0.0
-defmodule FLHook.FieldType do
-  @moduledoc """
-  A behaviour that can be implemented by custom coercer modules.
-  """
-  @moduledoc deprecated: "Use the `FLHook.Coercible` behaviour instead"
-
-  @callback parse(String.t()) :: {:ok, any} | :error
+  @callback parse(binary) :: {:ok, any} | :error
 end

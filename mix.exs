@@ -1,14 +1,14 @@
 defmodule FLHook.MixProject do
   use Mix.Project
 
-  @version "2.2.0"
+  @version "3.0.0"
   @github_url "https://github.com/tlux/fl_hook_client"
 
   def project do
     [
       app: :fl_hook_client,
       version: @version,
-      elixir: "~> 1.14",
+      elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -39,7 +39,7 @@ defmodule FLHook.MixProject do
   end
 
   defp description do
-    "A library that allows connecting to Freelancer game servers via an " <>
+    "A library that allows connecting to Freelancer game servers via a " <>
       "FLHook socket to run commands and receive events."
   end
 
@@ -85,14 +85,15 @@ defmodule FLHook.MixProject do
           FLHook.Command
         ],
         Results: [
-          FLHook.Dict,
-          FLHook.Duration,
-          FLHook.Event,
-          FLHook.FieldType,
-          FLHook.Result
+          FLHook.Event
         ],
         "Encoding & Decoding": [
           FLHook.Codec,
+          FLHook.Codecs.UTF16LE,
+          FLHook.Coercer,
+          FLHook.Coercible,
+          FLHook.Dict,
+          FLHook.Duration,
           FLHook.XMLText
         ]
       ]

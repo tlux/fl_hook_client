@@ -36,7 +36,7 @@ can be installed by adding `fl_hook_client` to your list of dependencies in
 ```elixir
 def deps do
   [
-    {:fl_hook_client, "~> 2.1"}
+    {:fl_hook_client, "~> 3.0"}
   ]
 end
 ```
@@ -49,7 +49,7 @@ Initiate a connection to a server (with a list of all possible options):
 {:ok, client} =
   FLHook.Client.start_link(
     backoff_interval: 1234,
-    codec: :unicode,
+    codec: FLHook.Codecs.UTF16LE,
     connect_timeout: 2345,
     event_mode: true,
     host: "localhost",
@@ -67,7 +67,7 @@ Once connected, you can send commands to the server.
 
 ```elixir
 FLHook.cmd(client, "readcharfile Player1")
-# => {:ok, %FLHook.Result{lines: ["...", "..."]}}
+# => {:ok, ["...", "..."]}
 ```
 
 Alternatively, you can use the tuple format for commands:
@@ -142,7 +142,7 @@ process as first argument.
 
 ```elixir
 MyApp.FLClient.cmd(client, "readcharfile Player1")
-# => {:ok, %FLHook.Result{lines: ["...", "..."]}}
+# => {:ok, ["...", "..."]}
 ```
 
 ## Docs

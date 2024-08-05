@@ -312,6 +312,8 @@ defmodule FLHook.Client do
 
     case Codec.decode(state.config.codec, msg) do
       {:ok, msg} ->
+        Logger.debug("[FLHook RECV] #{inspect(msg)}")
+
         case Event.parse(msg) do
           {:ok, event} ->
             handle_event(event, state)
@@ -375,7 +377,7 @@ defmodule FLHook.Client do
           %{status: :ok} = reply ->
             Connection.reply(
               reply.client,
-              {:ok, Reply.to_result(reply)}
+              {:ok, Reply.rows(reply)}
             )
 
             {:noreply, %{state | queue: new_queue}}
@@ -413,6 +415,7 @@ defmodule FLHook.Client do
     with {:socket, {:ok, value}} <-
            {:socket, config.tcp_adapter.recv(socket, 0, config.recv_timeout)},
          {:codec, {:ok, decoded}} <- {:codec, Codec.decode(config.codec, value)} do
+      Logger.debug("[FLHook RECV] #{inspect(decoded)}")
       {:ok, decoded}
     else
       {:codec, error} -> error
@@ -423,7 +426,7 @@ defmodule FLHook.Client do
   defp read_cmd_result(socket, config) do
     case do_read_cmd_result(%Reply{}, socket, config) do
       %Reply{status: :ok} = reply ->
-        {:ok, Reply.to_result(reply)}
+        {:ok, Reply.rows(reply)}
 
       %Reply{status: {:error, detail}} ->
         {:error, %CommandError{detail: detail}}
@@ -444,6 +447,8 @@ defmodule FLHook.Client do
   defp do_read_cmd_result(%Reply{} = reply, _socket, _config), do: reply
 
   defp send_msg(socket, config, value) do
+    Logger.debug("[FLHook SEND] #{inspect(value)}")
+
     with {:codec, {:ok, encoded}} <-
            {:codec, Codec.encode(config.codec, value)},
          {:socket, :ok} <- {:socket, config.tcp_adapter.send(socket, encoded)} do

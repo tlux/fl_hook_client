@@ -5,8 +5,8 @@ defmodule FLHook.CommandErrorTest do
 
   describe "message/1" do
     test "get message" do
-      assert Exception.message(%CommandError{detail: "Unknown command"}) ==
-               "Command error: Unknown command"
+      assert Exception.message(%CommandError{detail: "unknown command"}) ==
+               "unknown command"
     end
   end
 end

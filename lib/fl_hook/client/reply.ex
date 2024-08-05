@@ -1,15 +1,14 @@
 defmodule FLHook.Client.Reply do
   @moduledoc false
 
-  alias FLHook.Result
   alias FLHook.Utils
 
-  defstruct [:client, chardata: [], lines: [], status: :pending]
+  defstruct [:client, chardata: [], rows: [], status: :pending]
 
   @type t :: %__MODULE__{
           chardata: IO.chardata(),
           client: nil | GenServer.from(),
-          lines: [String.t()],
+          rows: [binary],
           status: :pending | :ok | {:error, String.t()}
         }
 
@@ -17,29 +16,29 @@ defmodule FLHook.Client.Reply do
   def add_chunk(%__MODULE__{status: :pending} = reply, chunk) do
     data = [reply.chardata, chunk]
 
-    {status, lines} =
-      data
-      |> IO.chardata_to_string()
-      |> String.splitter(Utils.line_sep())
-      |> Enum.reduce_while({:pending, []}, fn
-        "OK" <> _, {_, lines} ->
-          {:cont, {:ok, lines}}
+    data
+    |> IO.chardata_to_string()
+    |> String.splitter(Utils.line_sep())
+    |> Enum.reduce_while({:pending, []}, fn
+      "OK" <> _, {_, rows} ->
+        {:cont, {:ok, rows}}
 
-        "ERR " <> reason, {_, lines} ->
-          {:cont, {{:error, String.trim_trailing(reason)}, lines}}
+      "ERR " <> reason, {_, rows} ->
+        {:cont, {{:error, String.trim_trailing(reason)}, rows}}
 
-        line, {:pending, lines} ->
-          {:cont, {:pending, [line | lines]}}
+      row, {:pending, rows} ->
+        {:cont, {:pending, [row | rows]}}
 
-        _line, acc ->
-          {:halt, acc}
-      end)
-
-    %{reply | chardata: data, lines: lines, status: status}
+      _row, acc ->
+        {:halt, acc}
+    end)
+    |> then(fn {status, rows} ->
+      %{reply | chardata: data, status: status, rows: rows}
+    end)
   end
 
-  @spec to_result(t) :: Result.t()
-  def to_result(%__MODULE__{status: :ok} = reply) do
-    %Result{lines: Enum.reverse(reply.lines)}
+  @spec rows(t) :: [binary]
+  def rows(%__MODULE__{status: :ok, rows: rows}) do
+    Enum.reverse(rows)
   end
 end

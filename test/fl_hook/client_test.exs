@@ -13,7 +13,6 @@ defmodule FLHook.ClientTest do
   alias FLHook.Event
   alias FLHook.MockInetAdapter
   alias FLHook.MockTCPAdapter
-  alias FLHook.Result
   alias FLHook.SocketError
 
   setup :set_mox_global
@@ -23,7 +22,6 @@ defmodule FLHook.ClientTest do
      config:
        Config.new(
          backoff_interval: 1234,
-         codec: :unicode,
          connect_timeout: 2345,
          event_mode: false,
          host: "foo.bar",
@@ -41,7 +39,7 @@ defmodule FLHook.ClientTest do
       test_pid = self()
       fake_socket = make_ref()
 
-      {:ok, pass_cmd} = Codec.encode(:unicode, "pass $3cret\r\n")
+      {:ok, pass_cmd} = encode("pass $3cret\r\n")
 
       MockTCPAdapter
       |> expect(:connect, fn ~c"foo.bar",
@@ -51,13 +49,13 @@ defmodule FLHook.ClientTest do
         {:ok, fake_socket}
       end)
       |> expect(:recv, fn ^fake_socket, 0, 3456 ->
-        Codec.encode(:unicode, "Welcome to FLHack\r\n")
+        encode("Welcome to FLHack\r\n")
       end)
       |> expect(:send, fn ^fake_socket, ^pass_cmd ->
         :ok
       end)
       |> expect(:recv, fn ^fake_socket, 0, 3456 ->
-        Codec.encode(:unicode, "OK\r\n")
+        encode("OK\r\n")
       end)
       |> expect(:controlling_process, fn ^fake_socket, pid ->
         send(test_pid, {:controlling_process, pid})
@@ -77,7 +75,7 @@ defmodule FLHook.ClientTest do
       test_pid = self()
       fake_socket = make_ref()
 
-      {:ok, pass_cmd} = Codec.encode(:unicode, "pass $3cret\r\n")
+      {:ok, pass_cmd} = encode("pass $3cret\r\n")
 
       MockTCPAdapter
       |> expect(:connect, fn ~c"foo.bar",
@@ -87,13 +85,13 @@ defmodule FLHook.ClientTest do
         {:ok, fake_socket}
       end)
       |> expect(:recv, fn ^fake_socket, 0, 3456 ->
-        Codec.encode(:unicode, "Welcome to FLHack\r\n")
+        encode("Welcome to FLHack\r\n")
       end)
       |> expect(:send, fn ^fake_socket, ^pass_cmd ->
         :ok
       end)
       |> expect(:recv, fn ^fake_socket, 0, 3456 ->
-        Codec.encode(:unicode, "OK\r\n")
+        encode("OK\r\n")
       end)
       |> expect(:controlling_process, fn ^fake_socket, pid ->
         send(test_pid, {:controlling_process, pid})
@@ -107,7 +105,6 @@ defmodule FLHook.ClientTest do
           {Client,
            [
              backoff_interval: 1234,
-             codec: :unicode,
              connect_timeout: 2345,
              event_mode: false,
              host: "foo.bar",
@@ -135,8 +132,8 @@ defmodule FLHook.ClientTest do
       test_pid = self()
       fake_socket = make_ref()
 
-      {:ok, pass_cmd} = Codec.encode(:unicode, "pass $3cret\r\n")
-      {:ok, eventmode_cmd} = Codec.encode(:unicode, "eventmode\r\n")
+      {:ok, pass_cmd} = encode("pass $3cret\r\n")
+      {:ok, eventmode_cmd} = encode("eventmode\r\n")
 
       MockTCPAdapter
       |> expect(:connect, fn ~c"foo.bar",
@@ -146,19 +143,19 @@ defmodule FLHook.ClientTest do
         {:ok, fake_socket}
       end)
       |> expect(:recv, fn ^fake_socket, 0, 3456 ->
-        Codec.encode(:unicode, "Welcome to FLHack\r\n")
+        encode("Welcome to FLHack\r\n")
       end)
       |> expect(:send, fn ^fake_socket, ^pass_cmd ->
         :ok
       end)
       |> expect(:recv, fn ^fake_socket, 0, 3456 ->
-        Codec.encode(:unicode, "OK\r\n")
+        encode("OK\r\n")
       end)
       |> expect(:send, fn ^fake_socket, ^eventmode_cmd ->
         :ok
       end)
       |> expect(:recv, fn ^fake_socket, 0, 3456 ->
-        Codec.encode(:unicode, "OK\r\n")
+        encode("OK\r\n")
       end)
       |> expect(:controlling_process, fn ^fake_socket, pid ->
         send(test_pid, {:controlling_process, pid})
@@ -206,7 +203,7 @@ defmodule FLHook.ClientTest do
         {:ok, fake_socket}
       end)
       |> expect(:recv, fn ^fake_socket, _, _ ->
-        Codec.encode(:unicode, "Some invalid text\r\n")
+        encode("Some invalid text\r\n")
       end)
       |> expect(:close, fn ^fake_socket ->
         :ok
@@ -251,20 +248,20 @@ defmodule FLHook.ClientTest do
     test "auth error", %{config: config} do
       fake_socket = make_ref()
 
-      {:ok, pass_cmd} = Codec.encode(:unicode, "pass $3cret\r\n")
+      {:ok, pass_cmd} = encode("pass $3cret\r\n")
 
       MockTCPAdapter
       |> expect(:connect, fn _, _, _, _ ->
         {:ok, fake_socket}
       end)
       |> expect(:recv, fn ^fake_socket, _, _ ->
-        Codec.encode(:unicode, "Welcome to FLHack\r\n")
+        encode("Welcome to FLHack\r\n")
       end)
       |> expect(:send, fn ^fake_socket, ^pass_cmd ->
         :ok
       end)
       |> expect(:recv, fn ^fake_socket, _, _ ->
-        Codec.encode(:unicode, "ERR invalid password\r\n")
+        encode("ERR invalid password\r\n")
       end)
       |> expect(:close, fn ^fake_socket ->
         :ok
@@ -278,34 +275,34 @@ defmodule FLHook.ClientTest do
                start_supervised!({Client, config})
 
                eventually(fn -> verify!() end)
-             end) =~ "Command error: invalid password"
+             end) =~ "invalid password"
     end
 
     test "event mode error", %{config: config} do
       config = %{config | event_mode: true}
       fake_socket = make_ref()
 
-      {:ok, pass_cmd} = Codec.encode(:unicode, "pass $3cret\r\n")
-      {:ok, eventmode_cmd} = Codec.encode(:unicode, "eventmode\r\n")
+      {:ok, pass_cmd} = encode("pass $3cret\r\n")
+      {:ok, eventmode_cmd} = encode("eventmode\r\n")
 
       MockTCPAdapter
       |> expect(:connect, fn _, _, _, _ ->
         {:ok, fake_socket}
       end)
       |> expect(:recv, fn ^fake_socket, _, _ ->
-        Codec.encode(:unicode, "Welcome to FLHack\r\n")
+        encode("Welcome to FLHack\r\n")
       end)
       |> expect(:send, fn ^fake_socket, ^pass_cmd ->
         :ok
       end)
       |> expect(:recv, fn ^fake_socket, _, _ ->
-        Codec.encode(:unicode, "OK\r\n")
+        encode("OK\r\n")
       end)
       |> expect(:send, fn ^fake_socket, ^eventmode_cmd ->
         :ok
       end)
       |> expect(:recv, fn ^fake_socket, _, _ ->
-        Codec.encode(:unicode, "ERR insufficient rights\r\n")
+        encode("ERR insufficient rights\r\n")
       end)
       |> expect(:close, fn ^fake_socket ->
         :ok
@@ -319,7 +316,7 @@ defmodule FLHook.ClientTest do
                start_supervised!({Client, config})
 
                eventually(fn -> verify!() end)
-             end) =~ "Command error: insufficient rights"
+             end) =~ "insufficient rights"
     end
   end
 
@@ -334,7 +331,7 @@ defmodule FLHook.ClientTest do
       test_pid = self()
       fake_socket = make_ref()
 
-      {:ok, pass_cmd} = Codec.encode(:unicode, "pass $3cret\r\n")
+      {:ok, pass_cmd} = encode("pass $3cret\r\n")
 
       MockTCPAdapter
       |> expect(:connect, fn ~c"foo.bar",
@@ -344,13 +341,13 @@ defmodule FLHook.ClientTest do
         {:ok, fake_socket}
       end)
       |> expect(:recv, fn ^fake_socket, 0, 3456 ->
-        Codec.encode(:unicode, "Welcome to FLHack\r\n")
+        encode("Welcome to FLHack\r\n")
       end)
       |> expect(:send, fn ^fake_socket, ^pass_cmd ->
         :ok
       end)
       |> expect(:recv, fn ^fake_socket, 0, 3456 ->
-        Codec.encode(:unicode, "OK\r\n")
+        encode("OK\r\n")
       end)
       |> expect(:controlling_process, fn ^fake_socket, pid ->
         send(test_pid, {:controlling_process, pid})
@@ -406,13 +403,13 @@ defmodule FLHook.ClientTest do
         {:ok, fake_socket}
       end)
       |> expect(:recv, fn ^fake_socket, _, _ ->
-        Codec.encode(:unicode, "Welcome to FLHack\r\n")
+        encode("Welcome to FLHack\r\n")
       end)
       |> expect(:send, fn ^fake_socket, _ ->
         :ok
       end)
       |> expect(:recv, fn ^fake_socket, _, _ ->
-        Codec.encode(:unicode, "OK\r\n")
+        encode("OK\r\n")
       end)
       |> expect(:controlling_process, fn ^fake_socket, _ ->
         :ok
@@ -446,7 +443,7 @@ defmodule FLHook.ClientTest do
     end
 
     test "successfully run string command", %{client: client, socket: socket} do
-      {:ok, cmd} = Codec.encode(:unicode, "isloggedin Foobar\r\n")
+      {:ok, cmd} = encode("isloggedin Foobar\r\n")
 
       # Command sent
       expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
@@ -465,11 +462,11 @@ defmodule FLHook.ClientTest do
 
       send_unicode_tcp_message(client, socket, "OK\r\n")
 
-      assert {:ok, %Result{lines: []}} = Task.await(task)
+      assert {:ok, []} = Task.await(task)
     end
 
     test "successfully run tuple command", %{client: client, socket: socket} do
-      {:ok, cmd} = Codec.encode(:unicode, "addcash Foobar 1234\r\n")
+      {:ok, cmd} = encode("addcash Foobar 1234\r\n")
 
       # Command sent
       expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
@@ -488,12 +485,12 @@ defmodule FLHook.ClientTest do
 
       send_unicode_tcp_message(client, socket, "OK\r\n")
 
-      assert {:ok, %Result{lines: []}} = Task.await(task)
+      assert {:ok, []} = Task.await(task)
     end
 
     test "successfully run command with result",
          %{client: client, socket: socket} do
-      {:ok, cmd} = Codec.encode(:unicode, "help\r\n")
+      {:ok, cmd} = encode("help\r\n")
 
       # Command sent
       expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
@@ -514,11 +511,11 @@ defmodule FLHook.ClientTest do
       send_unicode_tcp_message(client, socket, "Line 2\r\n")
       send_unicode_tcp_message(client, socket, "OK\r\n")
 
-      assert {:ok, %Result{lines: ["Line 1", "Line 2"]}} = Task.await(task)
+      assert {:ok, ["Line 1", "Line 2"]} = Task.await(task)
     end
 
     test "send error", %{client: client, socket: socket} do
-      {:ok, cmd} = Codec.encode(:unicode, "addcash Foobar 1234\r\n")
+      {:ok, cmd} = encode("addcash Foobar 1234\r\n")
 
       expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
         {:error, :something_went_wrong}
@@ -529,7 +526,7 @@ defmodule FLHook.ClientTest do
     end
 
     test "command error", %{client: client, socket: socket} do
-      {:ok, cmd} = Codec.encode(:unicode, "addcash Foobar 1234\r\n")
+      {:ok, cmd} = encode("addcash Foobar 1234\r\n")
 
       # Command sent
       expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
@@ -574,7 +571,7 @@ defmodule FLHook.ClientTest do
     end
 
     test "decode error", %{client: client, socket: socket} do
-      {:ok, cmd} = Codec.encode(:unicode, "addcash Foobar 1234\r\n")
+      {:ok, cmd} = encode("addcash Foobar 1234\r\n")
 
       # Command sent
       MockTCPAdapter
@@ -604,7 +601,7 @@ defmodule FLHook.ClientTest do
           end
 
         assert {{%CodecError{
-                   codec: :unicode,
+                   codec: FLHook.Codecs.UTF16LE,
                    direction: :decode,
                    value: "invalid"
                  }, _}, _} = cought_exit
@@ -612,7 +609,7 @@ defmodule FLHook.ClientTest do
     end
 
     test "timeout error on receive", %{client: client, socket: socket} do
-      {:ok, cmd} = Codec.encode(:unicode, "help\r\n")
+      {:ok, cmd} = encode("help\r\n")
 
       # Command sent
       expect(MockTCPAdapter, :send, fn ^socket, ^cmd -> :ok end)
@@ -641,7 +638,7 @@ defmodule FLHook.ClientTest do
     end
 
     test "successfully run string command", %{client: client, socket: socket} do
-      {:ok, cmd} = Codec.encode(:unicode, "isloggedin Foobar\r\n")
+      {:ok, cmd} = encode("isloggedin Foobar\r\n")
 
       # Command sent
       expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
@@ -660,11 +657,11 @@ defmodule FLHook.ClientTest do
 
       send_unicode_tcp_message(client, socket, "OK\r\n")
 
-      assert %Result{lines: []} = Task.await(task)
+      assert [] = Task.await(task)
     end
 
     test "successfully run tuple command", %{client: client, socket: socket} do
-      {:ok, cmd} = Codec.encode(:unicode, "addcash Foobar 1234\r\n")
+      {:ok, cmd} = encode("addcash Foobar 1234\r\n")
 
       # Command sent
       expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
@@ -683,11 +680,11 @@ defmodule FLHook.ClientTest do
 
       send_unicode_tcp_message(client, socket, "OK\r\n")
 
-      assert %Result{lines: []} = Task.await(task)
+      assert [] = Task.await(task)
     end
 
     test "raise command error", %{client: client, socket: socket} do
-      {:ok, cmd} = Codec.encode(:unicode, "addcash Foobar 1234\r\n")
+      {:ok, cmd} = encode("addcash Foobar 1234\r\n")
 
       # Command sent
       expect(MockTCPAdapter, :send, fn ^socket, ^cmd ->
@@ -903,11 +900,15 @@ defmodule FLHook.ClientTest do
   end
 
   defp send_unicode_tcp_message(client, socket, msg) do
-    {:ok, msg} = Codec.encode(:unicode, msg)
+    {:ok, msg} = encode(msg)
     send_tcp_message(client, socket, msg)
   end
 
   defp send_tcp_message(client, socket, msg) do
     send(client, {:tcp, socket, msg})
+  end
+
+  defp encode(msg) do
+    Codec.encode(FLHook.Codecs.UTF16LE, msg)
   end
 end

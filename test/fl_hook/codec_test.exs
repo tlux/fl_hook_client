@@ -6,43 +6,25 @@ defmodule FLHook.CodecTest do
 
   describe "decode/2" do
     test "success" do
-      assert Codec.decode(:unicode, <<79, 0, 75, 0>>) == {:ok, "OK"}
-    end
-
-    test "unknown codec" do
-      assert Codec.decode(:unicode, "invalid") ==
-               {:error,
-                %CodecError{
-                  codec: :unicode,
-                  direction: :decode,
-                  value: "invalid"
-                }}
+      assert Codec.decode(FLHook.Codecs.UTF16LE, <<79, 0, 75, 0>>) ==
+               {:ok, "OK"}
     end
 
     test "decode error" do
-      assert Codec.decode(:invalid, "invalid") ==
+      assert Codec.decode(FLHook.Codecs.UTF16LE, <<0>>) ==
                {:error,
                 %CodecError{
-                  codec: :invalid,
+                  codec: FLHook.Codecs.UTF16LE,
                   direction: :decode,
-                  value: "invalid"
+                  value: <<0>>
                 }}
     end
   end
 
   describe "encode/2" do
     test "success" do
-      assert Codec.encode(:unicode, "OK") == {:ok, <<79, 0, 75, 0>>}
-    end
-
-    test "encode error" do
-      assert Codec.encode(:invalid, "invalid") ==
-               {:error,
-                %CodecError{
-                  codec: :invalid,
-                  direction: :encode,
-                  value: "invalid"
-                }}
+      assert Codec.encode(FLHook.Codecs.UTF16LE, "OK") ==
+               {:ok, <<79, 0, 75, 0>>}
     end
   end
 end

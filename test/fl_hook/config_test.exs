@@ -8,7 +8,7 @@ defmodule FLHook.ConfigTest do
       config = Config.new(password: "test")
 
       assert config.backoff_interval == 1000
-      assert config.codec == :unicode
+      assert config.codec == FLHook.Codecs.UTF16LE
       assert config.connect_timeout == 5000
       assert config.event_mode == false
       assert config.host == "localhost"

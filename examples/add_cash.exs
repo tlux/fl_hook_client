@@ -1,7 +1,7 @@
 {:ok, client} =
   FLHook.Client.start_link(
-    host: System.get_env("FLHOST", "localhost"),
-    password: System.fetch_env!("FLPASS")
+    host: System.get_env("FLHOST", "windows-server"),
+    password: System.get_env("FLPASS", "SuperSecret")
   )
 
 new_cash =
@@ -13,7 +13,9 @@ new_cash =
        String.to_integer(System.fetch_env!("CASH"))
      ]}
   )
-  |> FLHook.Result.one()
-  |> FLHook.Dict.fetch!("cash", :integer)
+  |> hd()
+  |> FLHook.Dict.parse()
+  |> Map.fetch!("cash")
+  |> String.to_integer()
 
 IO.puts("New cash: #{new_cash}")

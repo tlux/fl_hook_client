@@ -3,8 +3,6 @@ defmodule FLHook.ClientIntegrationTest do
 
   alias FLHook.Client
   alias FLHook.CommandError
-  alias FLHook.Dict
-  alias FLHook.Result
   alias FLHook.SocketError
 
   @moduletag :integration
@@ -12,10 +10,8 @@ defmodule FLHook.ClientIntegrationTest do
   test "send command" do
     client = start_client!()
 
-    assert {:ok, %Result{} = result} = Client.cmd(client, "serverinfo")
-
-    assert %Dict{data: %{"uptime" => _, "serverload" => _, "npcspawn" => _}} =
-             Result.one(result)
+    assert {:ok, [%{"uptime" => _, "serverload" => _, "npcspawn" => _}]} =
+             Client.cmd(client, "serverinfo")
 
     assert {:ok, _} = Client.cmd(client, {"msgu", ["Hello FLHook!"]})
   end
@@ -24,7 +20,7 @@ defmodule FLHook.ClientIntegrationTest do
     client = start_client!()
 
     assert {:error, %CommandError{} = error} = Client.cmd(client, "invalid")
-    assert Exception.message(error) == "Command error: unknown command"
+    assert Exception.message(error) == "unknown command"
   end
 
   test "connection closed" do

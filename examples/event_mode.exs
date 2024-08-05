@@ -1,21 +1,21 @@
 {:ok, client} =
   FLHook.Client.start_link(
-    host: System.get_env("FLHOST", "localhost"),
-    password: System.fetch_env!("FLPASS"),
+    host: System.get_env("FLHOST", "windows-server"),
+    password: System.get_env("FLPASS", "SuperSecret"),
     event_mode: true
   )
 
 defmodule EventListener do
   def listen do
     receive do
-      %FLHook.Event{type: type, dict: dict} ->
-        IO.inspect(dict, label: type)
+      %FLHook.Event{} = event ->
+        IO.inspect(event)
         listen()
     end
   end
 end
 
-IO.puts("Awaiting events...")
+IO.puts("Listening for events...")
 
 FLHook.subscribe(client)
 EventListener.listen()

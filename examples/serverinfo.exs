@@ -1,13 +1,16 @@
 {:ok, client} =
   FLHook.Client.start_link(
-    host: System.get_env("FLHOST", "localhost"),
-    password: System.fetch_env!("FLPASS")
+    host: System.get_env("FLHOST", "windows-server"),
+    password: System.get_env("FLPASS", "SuperSecret")
   )
 
 Process.sleep(500)
 
 client
 |> FLHook.cmd!("serverinfo")
-|> FLHook.Result.one()
-|> FLHook.Dict.to_map(:atom)
+|> hd()
+|> FLHook.Dict.parse()
+|> FLHook.Dict.coerce("serverload", :float)
+|> FLHook.Dict.coerce("npcspawn", :boolean)
+|> FLHook.Dict.coerce("uptime", :duration)
 |> IO.inspect()

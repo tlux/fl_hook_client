@@ -1,7 +1,6 @@
 defmodule FLHook.EventTest do
   use ExUnit.Case, async: true
 
-  alias FLHook.Dict
   alias FLHook.Event
 
   describe "parse/1" do
@@ -17,13 +16,12 @@ defmodule FLHook.EventTest do
                  {:ok,
                   %Event{
                     type: event_type,
-                    dict:
-                      Dict.new(%{
-                        "from" => "Player",
-                        "id" => "1337",
-                        "type" => "console",
-                        "text" => "Hello World"
-                      })
+                    data: %{
+                      "from" => "Player",
+                      "id" => "1337",
+                      "type" => "console",
+                      "text" => "Hello World"
+                    }
                   }}
       end)
     end

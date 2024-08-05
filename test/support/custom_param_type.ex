@@ -1,5 +1,5 @@
 defmodule FLHook.CustomFieldType do
-  @behaviour FLHook.FieldType
+  @behaviour FLHook.Coercible
 
   def parse("bar"), do: {:ok, "BAR"}
   def parse("baz"), do: :error
