@@ -9,7 +9,7 @@ defmodule FLHook.Dict do
   Parses a dictionary string into a map.
   """
   @spec parse(binary, Keyword.t()) :: map
-  def parse(binary, opts) when is_binary(binary) do
+  def parse(binary, opts \\ []) when is_binary(binary) do
     str = String.trim_trailing(binary, Utils.line_sep())
     str_len = String.length(str)
     spread = opts[:spread]
