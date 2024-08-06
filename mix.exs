@@ -90,10 +90,7 @@ defmodule FLHook.MixProject do
         "Encoding & Decoding": [
           FLHook.Codec,
           FLHook.Codecs.UTF16LE,
-          FLHook.Coercer,
-          FLHook.Coercible,
           FLHook.Dict,
-          FLHook.Duration,
           FLHook.XMLText
         ]
       ]

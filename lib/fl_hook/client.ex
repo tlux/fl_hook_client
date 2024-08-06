@@ -128,15 +128,6 @@ defmodule FLHook.Client do
   end
 
   @doc false
-  @spec cmd!(client, Command.command(), timeout) :: [binary] | no_return
-  def cmd!(client, cmd, timeout \\ :infinity) do
-    case cmd(client, cmd, timeout) do
-      {:ok, result} -> result
-      {:error, error} -> raise error
-    end
-  end
-
-  @doc false
   @spec subscribe(client, pid) :: :ok
   def subscribe(client, listener \\ self()) do
     Connection.call(client, {:subscribe, listener})
