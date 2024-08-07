@@ -108,15 +108,25 @@ defmodule FLHook do
   Registers the specified process as event listener.
   """
   @doc since: "1.0.1"
-  @spec subscribe(client, pid) :: :ok
-  defdelegate subscribe(client, listener \\ self()), to: Client
+  @spec subscribe(client, pid, timeout) :: :ok
+  defdelegate subscribe(
+                client,
+                listener \\ self(),
+                timeout \\ :infinity
+              ),
+              to: Client
 
   @doc """
   Removes the event listener for the specified process.
   """
   @doc since: "1.0.1"
-  @spec unsubscribe(client, pid) :: :ok
-  defdelegate unsubscribe(client, listener \\ self()), to: Client
+  @spec unsubscribe(client, pid, timeout) :: :ok
+  defdelegate unsubscribe(
+                client,
+                listener \\ self(),
+                timeout \\ :infinity
+              ),
+              to: Client
 
   @doc """
   Sends a command to the socket and returns the result as list of maps.
@@ -201,4 +211,11 @@ defmodule FLHook do
 
   defp bang!({:ok, result}), do: result
   defp bang!({:error, error}), do: raise(error)
+
+  @doc """
+  Determines whether the client is in event mode.
+  """
+  @doc since: "3.0.0"
+  @spec event_mode?(client, timeout) :: boolean
+  defdelegate event_mode?(client, timeout \\ :infinity), to: Client
 end

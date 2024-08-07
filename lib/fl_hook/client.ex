@@ -90,17 +90,17 @@ defmodule FLHook.Client do
   @doc """
   Opens the connection.
   """
-  @spec open(client) :: :ok | {:error, Exception.t()}
-  def open(client) do
-    Connection.call(client, :open)
+  @spec open(client, timeout) :: :ok | {:error, Exception.t()}
+  def open(client, timeout \\ :infinity) do
+    Connection.call(client, :open, timeout)
   end
 
   @doc """
   Closes the connection.
   """
-  @spec close(client) :: :ok
-  def close(client) do
-    Connection.call(client, :close)
+  @spec close(client, timeout) :: :ok
+  def close(client, timeout \\ :infinity) do
+    Connection.call(client, :close, timeout)
   end
 
   @doc """
@@ -111,13 +111,10 @@ defmodule FLHook.Client do
     Connection.call(client, :connected?)
   end
 
-  @doc """
-  Determines whether the client is in event mode.
-  """
-  @doc since: "3.0.0"
-  @spec event_mode?(client) :: boolean
-  def event_mode?(client) do
-    Connection.call(client, :event_mode?)
+  @doc false
+  @spec event_mode?(client, timeout) :: boolean
+  def event_mode?(client, timeout \\ :infinity) do
+    Connection.call(client, :event_mode?, timeout)
   end
 
   @doc false
@@ -128,15 +125,15 @@ defmodule FLHook.Client do
   end
 
   @doc false
-  @spec subscribe(client, pid) :: :ok
-  def subscribe(client, listener \\ self()) do
-    Connection.call(client, {:subscribe, listener})
+  @spec subscribe(client, pid, timeout) :: :ok
+  def subscribe(client, listener \\ self(), timeout \\ :infinity) do
+    Connection.call(client, {:subscribe, listener}, timeout)
   end
 
   @doc false
-  @spec unsubscribe(client, pid) :: :ok
-  def unsubscribe(client, listener \\ self()) do
-    Connection.call(client, {:unsubscribe, listener})
+  @spec unsubscribe(client, pid, timeout) :: :ok
+  def unsubscribe(client, listener \\ self(), timeout \\ :infinity) do
+    Connection.call(client, {:unsubscribe, listener}, timeout)
   end
 
   # Child Spec
@@ -498,8 +495,6 @@ defmodule FLHook.Client do
   defp maybe_cancel_timer(timer_ref), do: Process.cancel_timer(timer_ref)
 
   defp log_error(error, config) do
-    Logger.error(
-      "FLHook (#{config.host}:#{config.port}): #{Exception.message(error)}"
-    )
+    Logger.error("FLHook (#{config.host}:#{config.port}): #{Exception.message(error)}")
   end
 end
