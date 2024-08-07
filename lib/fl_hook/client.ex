@@ -21,6 +21,7 @@ defmodule FLHook.Client do
   alias FLHook.Utils
 
   @welcome_msg "Welcome to FLHack"
+  @client_timeout :infinity
 
   @typedoc """
   Type representing a FLHook client process.
@@ -91,7 +92,7 @@ defmodule FLHook.Client do
   Opens the connection.
   """
   @spec open(client, timeout) :: :ok | {:error, Exception.t()}
-  def open(client, timeout \\ :infinity) do
+  def open(client, timeout \\ @client_timeout) do
     Connection.call(client, :open, timeout)
   end
 
@@ -99,40 +100,40 @@ defmodule FLHook.Client do
   Closes the connection.
   """
   @spec close(client, timeout) :: :ok
-  def close(client, timeout \\ :infinity) do
+  def close(client, timeout \\ @client_timeout) do
     Connection.call(client, :close, timeout)
   end
 
   @doc """
   Determines whether the socket is connected.
   """
-  @spec connected?(client) :: boolean
-  def connected?(client) do
-    Connection.call(client, :connected?)
+  @spec connected?(client, timeout) :: boolean
+  def connected?(client, timeout \\ @client_timeout) do
+    Connection.call(client, :connected?, timeout)
   end
 
   @doc false
   @spec event_mode?(client, timeout) :: boolean
-  def event_mode?(client, timeout \\ :infinity) do
+  def event_mode?(client, timeout \\ @client_timeout) do
     Connection.call(client, :event_mode?, timeout)
   end
 
   @doc false
   @spec cmd(client, Command.command(), timeout) ::
           {:ok, [binary]} | {:error, Exception.t()}
-  def cmd(client, cmd, timeout \\ :infinity) do
+  def cmd(client, cmd, timeout \\ @client_timeout) do
     Connection.call(client, {:cmd, CommandSerializer.to_string(cmd)}, timeout)
   end
 
   @doc false
   @spec subscribe(client, pid, timeout) :: :ok
-  def subscribe(client, listener \\ self(), timeout \\ :infinity) do
+  def subscribe(client, listener \\ self(), timeout \\ @client_timeout) do
     Connection.call(client, {:subscribe, listener}, timeout)
   end
 
   @doc false
   @spec unsubscribe(client, pid, timeout) :: :ok
-  def unsubscribe(client, listener \\ self(), timeout \\ :infinity) do
+  def unsubscribe(client, listener \\ self(), timeout \\ @client_timeout) do
     Connection.call(client, {:unsubscribe, listener}, timeout)
   end
 

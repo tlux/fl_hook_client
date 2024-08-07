@@ -79,6 +79,8 @@ defmodule FLHook do
   alias FLHook.Dict
   alias FLHook.RowsCountError
 
+  @client_timeout :infinity
+
   @typedoc """
   Type representing a FLHook client process.
   """
@@ -88,9 +90,9 @@ defmodule FLHook do
   Sends a command to the socket and returns the result.
   """
   @doc since: "1.0.1"
-  @spec cmd(client, Command.command()) ::
+  @spec cmd(client, Command.command(), timeout) ::
           {:ok, [binary]} | {:error, Exception.t()}
-  defdelegate cmd(client, cmd, timeout \\ :infinity), to: Client
+  defdelegate cmd(client, cmd, timeout \\ @client_timeout), to: Client
 
   @doc """
   Sends a command to the socket and returns the result. Raises on error.
@@ -98,7 +100,7 @@ defmodule FLHook do
   @doc since: "1.0.1"
   @spec cmd!(client, Command.command(), timeout) ::
           [binary] | no_return
-  def cmd!(client, cmd, timeout \\ :infinity) do
+  def cmd!(client, cmd, timeout \\ @client_timeout) do
     client
     |> cmd(cmd, timeout)
     |> bang!()
@@ -112,7 +114,7 @@ defmodule FLHook do
   defdelegate subscribe(
                 client,
                 listener \\ self(),
-                timeout \\ :infinity
+                timeout \\ @client_timeout
               ),
               to: Client
 
@@ -124,7 +126,7 @@ defmodule FLHook do
   defdelegate unsubscribe(
                 client,
                 listener \\ self(),
-                timeout \\ :infinity
+                timeout \\ @client_timeout
               ),
               to: Client
 
@@ -134,7 +136,7 @@ defmodule FLHook do
   @doc since: "3.0.0"
   @spec all(client, Command.command(), Keyword.t(), timeout) ::
           {:ok, [map]} | {:error, Exception.t()}
-  def all(client, cmd, opts \\ [], timeout \\ :infinity) do
+  def all(client, cmd, opts \\ [], timeout \\ @client_timeout) do
     with {:ok, rows} <- cmd(client, cmd, timeout) do
       {:ok, Enum.map(rows, &Dict.parse(&1, opts))}
     end
@@ -145,7 +147,7 @@ defmodule FLHook do
   Raises on error.
   """
   @doc since: "3.0.0"
-  def all!(client, cmd, opts \\ [], timeout \\ :infinity) do
+  def all!(client, cmd, opts \\ [], timeout \\ @client_timeout) do
     client
     |> all(cmd, opts, timeout)
     |> bang!()
@@ -157,7 +159,7 @@ defmodule FLHook do
   @doc since: "3.0.0"
   @spec one(client, Command.command(), Keyword.t(), timeout) ::
           {:ok, map | nil} | {:error, Exception.t()}
-  def one(client, cmd, opts \\ [], timeout \\ :infinity) do
+  def one(client, cmd, opts \\ [], timeout \\ @client_timeout) do
     case cmd(client, cmd, timeout) do
       {:ok, []} -> {:ok, nil}
       {:ok, [row | _]} -> {:ok, Dict.parse(row, opts)}
@@ -171,7 +173,7 @@ defmodule FLHook do
   """
   @doc since: "3.0.0"
   @spec one!(client, Command.command(), Keyword.t(), timeout) :: map | nil
-  def one!(client, cmd, opts \\ [], timeout \\ :infinity) do
+  def one!(client, cmd, opts \\ [], timeout \\ @client_timeout) do
     client
     |> one(cmd, opts, timeout)
     |> bang!()
@@ -184,7 +186,7 @@ defmodule FLHook do
   @doc since: "3.0.0"
   @spec single(client, Command.command(), Keyword.t(), timeout) ::
           {:ok, map} | {:error, Exception.t()}
-  def single(client, cmd, opts \\ [], timeout \\ :infinity) do
+  def single(client, cmd, opts \\ [], timeout \\ @client_timeout) do
     case cmd(client, cmd, timeout) do
       {:ok, [row]} ->
         {:ok, Dict.parse(row, opts)}
@@ -203,7 +205,7 @@ defmodule FLHook do
   """
   @doc since: "3.0.0"
   @spec single!(client, Command.command(), Keyword.t(), timeout) :: map
-  def single!(client, cmd, opts \\ [], timeout \\ :infinity) do
+  def single!(client, cmd, opts \\ [], timeout \\ @client_timeout) do
     client
     |> single(cmd, opts, timeout)
     |> bang!()
@@ -217,5 +219,5 @@ defmodule FLHook do
   """
   @doc since: "3.0.0"
   @spec event_mode?(client, timeout) :: boolean
-  defdelegate event_mode?(client, timeout \\ :infinity), to: Client
+  defdelegate event_mode?(client, timeout \\ @client_timeout), to: Client
 end
