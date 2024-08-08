@@ -87,6 +87,13 @@ defmodule FLHook do
   @type client :: FLHook.Client.client()
 
   @doc """
+  Connects to a FLHook socket.
+  """
+  @doc since: "3.0.0"
+  @spec connect(FLHook.Config.t() | Keyword.t()) :: GenServer.on_start()
+  defdelegate connect(opts \\ []), to: Client, as: :start_link
+
+  @doc """
   Sends a command to the socket and returns the result.
   """
   @doc since: "1.0.1"
