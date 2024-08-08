@@ -47,7 +47,7 @@ defmodule FLHook do
         host: "localhost",
         port: 1920,
         event_mode: true,
-        connect_on_start: true,
+        open_on_start: true,
         backoff_interval: 1000,
         connect_timeout: 5000,
         password: "s3cret",

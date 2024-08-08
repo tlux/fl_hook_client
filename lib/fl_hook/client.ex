@@ -166,7 +166,7 @@ defmodule FLHook.Client do
       listeners: %{}
     }
 
-    if config.connect_on_start do
+    if config.open_on_start do
       {:connect, :init, state}
     else
       {:ok, state}

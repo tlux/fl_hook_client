@@ -324,7 +324,7 @@ defmodule FLHook.ClientTest do
     setup :verify_on_exit!
 
     setup %{config: config} do
-      {:ok, config: %{config | connect_on_start: false}}
+      {:ok, config: %{config | open_on_start: false}}
     end
 
     test "connect", %{config: config} do
