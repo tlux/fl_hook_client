@@ -12,13 +12,11 @@ defmodule FLHook.Client do
   alias FLHook.Codec
   alias FLHook.Command
   alias FLHook.CommandError
-  alias FLHook.CommandSerializer
   alias FLHook.Config
   alias FLHook.ConfigError
   alias FLHook.Event
   alias FLHook.HandshakeError
   alias FLHook.SocketError
-  alias FLHook.Utils
 
   @welcome_msg "Welcome to FLHack"
   @client_timeout :infinity
@@ -114,7 +112,9 @@ defmodule FLHook.Client do
     Connection.call(client, :connected?, timeout)
   end
 
-  @doc false
+  @doc """
+  Determines whether the client is in event mode.
+  """
   @spec event_mode?(client, timeout) :: boolean
   def event_mode?(client, timeout \\ @client_timeout) do
     Connection.call(client, :event_mode?, timeout)
@@ -123,8 +123,8 @@ defmodule FLHook.Client do
   @doc false
   @spec cmd(client, Command.command(), timeout) ::
           {:ok, [binary]} | {:error, Exception.t()}
-  def cmd(client, cmd, timeout \\ @client_timeout) do
-    Connection.call(client, {:cmd, CommandSerializer.to_string(cmd)}, timeout)
+  def cmd(client, cmd, timeout \\ @client_timeout) when is_binary(cmd) do
+    Connection.call(client, {:cmd, cmd}, timeout)
   end
 
   @doc false
@@ -275,8 +275,9 @@ defmodule FLHook.Client do
 
   def handle_call({:cmd, cmd}, from, state) do
     case send_cmd(state.socket, state.config, cmd) do
-      :ok ->
-        queue = :queue.in(%Reply{client: from}, state.queue)
+      {:ok, request_id} ->
+        queue =
+          :queue.in(%Reply{request_id: request_id, client: from}, state.queue)
 
         recv_timeout_ref =
           Process.send_after(self(), :timeout, state.config.recv_timeout)
@@ -317,10 +318,9 @@ defmodule FLHook.Client do
 
     case Codec.decode(state.config.codec, msg) do
       {:ok, msg} ->
-        Logger.debug("RECV: #{inspect(msg)}")
-
         case Event.parse(msg) do
           {:ok, event} ->
+            Logger.debug("recv #{inspect(msg)}")
             handle_event(event, state)
 
           :error ->
@@ -375,6 +375,10 @@ defmodule FLHook.Client do
 
     case :queue.out(state.queue) do
       {{:value, reply}, new_queue} ->
+        Logger.debug(fn ->
+          {"recv #{inspect(msg)}", request_id: reply.request_id}
+        end)
+
         case Reply.add_chunk(reply, msg) do
           %{status: :pending} = reply ->
             {:noreply, %{state | queue: :queue.in_r(reply, new_queue)}}
@@ -416,11 +420,14 @@ defmodule FLHook.Client do
     end
   end
 
-  defp read_chunk(socket, config) do
+  defp read_chunk(socket, config, request_id) do
     with {:socket, {:ok, value}} <-
            {:socket, config.tcp_adapter.recv(socket, 0, config.recv_timeout)},
          {:codec, {:ok, decoded}} <- {:codec, Codec.decode(config.codec, value)} do
-      Logger.debug("RECV: #{inspect(decoded)}")
+      Logger.debug(fn ->
+        {"recv #{inspect(decoded)}", request_id: request_id}
+      end)
+
       {:ok, decoded}
     else
       {:codec, error} -> error
@@ -428,8 +435,8 @@ defmodule FLHook.Client do
     end
   end
 
-  defp read_cmd_result(socket, config) do
-    case do_read_cmd_result(%Reply{}, socket, config) do
+  defp read_cmd_result(socket, config, request_id) do
+    case do_read_cmd_result(%Reply{request_id: request_id}, socket, config) do
       %Reply{status: :ok} = reply ->
         {:ok, Reply.rows(reply)}
 
@@ -442,7 +449,7 @@ defmodule FLHook.Client do
   end
 
   defp do_read_cmd_result(%Reply{status: :pending} = reply, socket, config) do
-    with {:ok, chunk} <- read_chunk(socket, config) do
+    with {:ok, chunk} <- read_chunk(socket, config, reply.request_id) do
       reply
       |> Reply.add_chunk(chunk)
       |> do_read_cmd_result(socket, config)
@@ -451,31 +458,33 @@ defmodule FLHook.Client do
 
   defp do_read_cmd_result(%Reply{} = reply, _socket, _config), do: reply
 
-  defp send_msg(socket, config, value) do
-    Logger.debug("SEND: #{inspect(value)}")
-
+  defp send_cmd(socket, config, cmd) do
     with {:codec, {:ok, encoded}} <-
-           {:codec, Codec.encode(config.codec, value)},
+           {:codec, Codec.encode(config.codec, Command.dump(cmd))},
          {:socket, :ok} <- {:socket, config.tcp_adapter.send(socket, encoded)} do
-      :ok
+      request_id = generate_request_id()
+
+      Logger.debug(fn ->
+        payload = cmd |> mask_string(config.password) |> Command.dump()
+        {"send #{inspect(payload)}", request_id: request_id}
+      end)
+
+      {:ok, request_id}
     else
       {:codec, error} -> error
       {:socket, {:error, reason}} -> {:error, %SocketError{reason: reason}}
     end
   end
 
-  defp send_cmd(socket, config, cmd) do
-    send_msg(socket, config, cmd <> Utils.line_sep())
-  end
-
+  # sends a command and receives the result in passive mode
   defp cmd_passive(socket, config, cmd) do
-    with :ok <- send_cmd(socket, config, CommandSerializer.to_string(cmd)) do
-      read_cmd_result(socket, config)
+    with {:ok, request_id} <- send_cmd(socket, config, cmd) do
+      read_cmd_result(socket, config, request_id)
     end
   end
 
   defp verify_welcome_msg(socket, config) do
-    case read_chunk(socket, config) do
+    case read_chunk(socket, config, nil) do
       {:ok, @welcome_msg <> _} -> :ok
       {:ok, message} -> {:error, %HandshakeError{actual_message: message}}
       error -> error
@@ -483,7 +492,7 @@ defmodule FLHook.Client do
   end
 
   defp authenticate(socket, config) do
-    with {:ok, _} <- cmd_passive(socket, config, {"pass", [config.password]}) do
+    with {:ok, _} <- cmd_passive(socket, config, "pass #{config.password}") do
       :ok
     end
   end
@@ -499,7 +508,22 @@ defmodule FLHook.Client do
   defp maybe_cancel_timer(nil), do: :ok
   defp maybe_cancel_timer(timer_ref), do: Process.cancel_timer(timer_ref)
 
+  @request_id_length 8
+
+  defp generate_request_id do
+    @request_id_length
+    |> :crypto.strong_rand_bytes()
+    |> Base.url_encode64()
+    |> binary_part(0, @request_id_length)
+  end
+
   defp log_error(error) do
     Logger.error(fn -> Exception.message(error) end)
+  end
+
+  @mask_string "******"
+
+  defp mask_string(text, search) do
+    String.replace(text, search, @mask_string)
   end
 end

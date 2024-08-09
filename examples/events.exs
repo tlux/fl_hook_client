@@ -1,5 +1,5 @@
 {:ok, client} =
-  FLHook.Client.start_link(
+  FLHook.connect(
     host: System.get_env("FLHOST", "windows-server"),
     password: System.get_env("FLPASS", "SuperSecret"),
     event_mode: true

@@ -3,11 +3,13 @@ defmodule FLHook.Client.Reply do
 
   alias FLHook.Utils
 
-  defstruct [:client, chardata: [], rows: [], status: :pending]
+  @enforce_keys [:request_id]
+  defstruct [:request_id, :client, chardata: [], rows: [], status: :pending]
 
   @type t :: %__MODULE__{
           chardata: IO.chardata(),
           client: nil | GenServer.from(),
+          request_id: String.t(),
           rows: [binary],
           status: :pending | :ok | {:error, String.t()}
         }

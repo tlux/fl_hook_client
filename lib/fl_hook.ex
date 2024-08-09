@@ -58,9 +58,8 @@ defmodule FLHook do
 
   Send a command to the server and receive the result immediately:
 
-      {:ok, result} = FLHook.cmd(client, {"addcash", ["MyUsername", 10]})
-      new_cash = FLHook.Result.param!(result, "cash")
-      IO.puts("New cash: \#{new_cash} credits")
+      {:ok, %{"cash" => cash}} = FLHook.single(client, {"addcash", ["MyUsername", 10]})
+      IO.puts("New cash: \#{cash} credits")
 
   ## Listen to Events
 
@@ -69,13 +68,12 @@ defmodule FLHook do
       FLHook.subscribe(client)
 
       receive do
-        %FLHook.Event{type: "kill", dict: dict} ->
-          IO.inspect(dict, label: "player killed")
+        %FLHook.Event{type: "kill", data: data} ->
+          IO.inspect(data, label: "player killed")
       end
   """
 
   alias FLHook.Client
-  alias FLHook.Command
   alias FLHook.Dict
   alias FLHook.RowsCountError
 
@@ -86,30 +84,173 @@ defmodule FLHook do
   """
   @type client :: FLHook.Client.client()
 
-  @doc """
-  Connects to a FLHook socket.
+  @typedoc """
+  Type representing a FLHook command.
   """
+  @type command :: FLHook.Command.command()
+
   @doc since: "3.0.0"
   @spec connect(FLHook.Config.t() | Keyword.t()) :: GenServer.on_start()
   defdelegate connect(opts \\ []), to: Client, as: :start_link
 
-  @doc """
-  Sends a command to the socket and returns the result.
-  """
-  @doc since: "1.0.1"
-  @spec cmd(client, Command.command(), timeout) ::
-          {:ok, [binary]} | {:error, Exception.t()}
-  defdelegate cmd(client, cmd, timeout \\ @client_timeout), to: Client
+  @doc since: "3.0.0"
+  @spec disconnect(client, timeout) :: :ok
+  defdelegate disconnect(
+                client,
+                timeout \\ @client_timeout
+              ),
+              to: Client,
+              as: :close
+
+  @doc since: "3.0.0"
+  @spec connected?(client, timeout) :: boolean
+  defdelegate connected?(client, timeout \\ @client_timeout), to: Client
+
+  @doc since: "3.0.0"
+  @spec event_mode?(client, timeout) :: boolean
+  defdelegate event_mode?(client, timeout \\ @client_timeout), to: Client
+
+  @deprecated "Use `exec/2` or `exec/3` instead"
+  defdelegate cmd(
+                client,
+                cmd,
+                timeout \\ @client_timeout
+              ),
+              to: __MODULE__,
+              as: :exec
+
+  @deprecated "Use `exec!/2` or `exec!/3` instead"
+  defdelegate cmd!(
+                client,
+                cmd,
+                timeout \\ @client_timeout
+              ),
+              to: __MODULE__,
+              as: :exec!
 
   @doc """
-  Sends a command to the socket and returns the result. Raises on error.
+  Sends a command to the socket and returns the result as rows of raw data.
   """
-  @doc since: "1.0.1"
-  @spec cmd!(client, Command.command(), timeout) ::
-          [binary] | no_return
-  def cmd!(client, cmd, timeout \\ @client_timeout) do
+  @doc since: "3.0.0"
+  @spec exec(client, command, timeout) ::
+          {:ok, [binary]} | {:error, Exception.t()}
+  defdelegate exec(
+                client,
+                cmd,
+                timeout \\ @client_timeout
+              ),
+              to: Client,
+              as: :cmd
+
+  @doc """
+  Sends a command to the socket and returns the result as rows of raw data.
+  Raises on error.
+  """
+  @doc since: "3.0.0"
+  @spec exec!(client, command, timeout) :: [binary] | no_return
+  def exec!(client, cmd, timeout \\ @client_timeout) do
     client
-    |> cmd(cmd, timeout)
+    |> exec(cmd, timeout)
+    |> bang!()
+  end
+
+  @doc """
+  Sends a command to the socket without returning the result.
+  """
+  @spec run(client, command, timeout) :: :ok | {:error, Exception.t()}
+  def run(client, cmd, timeout \\ @client_timeout) do
+    with {:ok, _} <- cmd(client, cmd, timeout), do: :ok
+  end
+
+  @doc """
+  Sends a command to the socket without returning the result. Raises on error.
+  """
+  @spec run!(client, command, timeout) :: :ok | no_return
+  def run!(client, cmd, timeout \\ @client_timeout) do
+    client
+    |> exec(cmd, timeout)
+    |> bang!()
+  end
+
+  @doc """
+  Sends a command to the socket and returns the result as list of maps.
+  """
+  @doc since: "3.0.0"
+  @spec all(client, command, Keyword.t(), timeout) ::
+          {:ok, [map]} | {:error, Exception.t()}
+  def all(client, cmd, opts \\ [], timeout \\ @client_timeout) do
+    with {:ok, rows} <- cmd(client, cmd, timeout) do
+      {:ok, Enum.map(rows, &Dict.parse(&1, opts))}
+    end
+  end
+
+  @doc """
+  Sends a command to the socket and returns the result as list of maps.
+  Raises on error.
+  """
+  @doc since: "3.0.0"
+  @spec all!(client, command, Keyword.t(), timeout) :: [map] | no_return
+  def all!(client, cmd, opts \\ [], timeout \\ @client_timeout) do
+    client
+    |> all(cmd, opts, timeout)
+    |> bang!()
+  end
+
+  @doc """
+  Sends a command to the socket and returns the first row in the results as map.
+  """
+  @doc since: "3.0.0"
+  @spec one(client, command, Keyword.t(), timeout) ::
+          {:ok, map | nil} | {:error, Exception.t()}
+  def one(client, cmd, opts \\ [], timeout \\ @client_timeout) do
+    case cmd(client, cmd, timeout) do
+      {:ok, []} -> {:ok, nil}
+      {:ok, [row | _]} -> {:ok, Dict.parse(row, opts)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
+  Sends a command to the socket and returns the first row in the results as map.
+  Raises on error.
+  """
+  @doc since: "3.0.0"
+  @spec one!(client, command, Keyword.t(), timeout) :: map | nil
+  def one!(client, cmd, opts \\ [], timeout \\ @client_timeout) do
+    client
+    |> one(cmd, opts, timeout)
+    |> bang!()
+  end
+
+  @doc """
+  Sends a command to the socket and returns the first row in the results as map.
+  Returns an error when the command returns more than one row.
+  """
+  @doc since: "3.0.0"
+  @spec single(client, command, Keyword.t(), timeout) ::
+          {:ok, map} | {:error, Exception.t()}
+  def single(client, cmd, opts \\ [], timeout \\ @client_timeout) do
+    case cmd(client, cmd, timeout) do
+      {:ok, [row]} ->
+        {:ok, Dict.parse(row, opts)}
+
+      {:ok, rows} when is_list(rows) ->
+        {:error, %RowsCountError{actual: length(rows), expected: 1}}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  @doc """
+  Sends a command to the socket and returns the first row in the results as map.
+  Raises an error when the command returns no rows or more than one row.
+  """
+  @doc since: "3.0.0"
+  @spec single!(client, command, Keyword.t(), timeout) :: map
+  def single!(client, cmd, opts \\ [], timeout \\ @client_timeout) do
+    client
+    |> single(cmd, opts, timeout)
     |> bang!()
   end
 
@@ -137,94 +278,6 @@ defmodule FLHook do
               ),
               to: Client
 
-  @doc """
-  Sends a command to the socket and returns the result as list of maps.
-  """
-  @doc since: "3.0.0"
-  @spec all(client, Command.command(), Keyword.t(), timeout) ::
-          {:ok, [map]} | {:error, Exception.t()}
-  def all(client, cmd, opts \\ [], timeout \\ @client_timeout) do
-    with {:ok, rows} <- cmd(client, cmd, timeout) do
-      {:ok, Enum.map(rows, &Dict.parse(&1, opts))}
-    end
-  end
-
-  @doc """
-  Sends a command to the socket and returns the result as list of maps.
-  Raises on error.
-  """
-  @doc since: "3.0.0"
-  def all!(client, cmd, opts \\ [], timeout \\ @client_timeout) do
-    client
-    |> all(cmd, opts, timeout)
-    |> bang!()
-  end
-
-  @doc """
-  Sends a command to the socket and returns the first row in the results as map.
-  """
-  @doc since: "3.0.0"
-  @spec one(client, Command.command(), Keyword.t(), timeout) ::
-          {:ok, map | nil} | {:error, Exception.t()}
-  def one(client, cmd, opts \\ [], timeout \\ @client_timeout) do
-    case cmd(client, cmd, timeout) do
-      {:ok, []} -> {:ok, nil}
-      {:ok, [row | _]} -> {:ok, Dict.parse(row, opts)}
-      {:error, _} = error -> error
-    end
-  end
-
-  @doc """
-  Sends a command to the socket and returns the first row in the results as map.
-  Raises on error.
-  """
-  @doc since: "3.0.0"
-  @spec one!(client, Command.command(), Keyword.t(), timeout) :: map | nil
-  def one!(client, cmd, opts \\ [], timeout \\ @client_timeout) do
-    client
-    |> one(cmd, opts, timeout)
-    |> bang!()
-  end
-
-  @doc """
-  Sends a command to the socket and returns the first row in the results as map.
-  Returns an error when the command returns more than one row.
-  """
-  @doc since: "3.0.0"
-  @spec single(client, Command.command(), Keyword.t(), timeout) ::
-          {:ok, map} | {:error, Exception.t()}
-  def single(client, cmd, opts \\ [], timeout \\ @client_timeout) do
-    case cmd(client, cmd, timeout) do
-      {:ok, [row]} ->
-        {:ok, Dict.parse(row, opts)}
-
-      {:ok, rows} when is_list(rows) ->
-        {:error, %RowsCountError{actual: length(rows), expected: 1}}
-
-      {:error, _} = error ->
-        error
-    end
-  end
-
-  @doc """
-  Sends a command to the socket and returns the first row in the results as map.
-  Raises an error when the command returns no rows or more than one row.
-  """
-  @doc since: "3.0.0"
-  @spec single!(client, Command.command(), Keyword.t(), timeout) :: map
-  def single!(client, cmd, opts \\ [], timeout \\ @client_timeout) do
-    client
-    |> single(cmd, opts, timeout)
-    |> bang!()
-  end
-
   defp bang!({:ok, result}), do: result
   defp bang!({:error, error}), do: raise(error)
-
-  @doc """
-  Determines whether the client is in event mode.
-  """
-  @doc since: "3.0.0"
-  @spec event_mode?(client, timeout) :: boolean
-  defdelegate event_mode?(client, timeout \\ @client_timeout), to: Client
 end

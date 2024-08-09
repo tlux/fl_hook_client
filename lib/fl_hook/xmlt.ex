@@ -1,10 +1,7 @@
-defmodule FLHook.XMLText do
+defmodule FLHook.XMLT do
   @moduledoc """
-  The XML text module allows composing formatted text to be sent via a chat
-  command.
-
-  A full reference can be found here:
-  https://docs.flhook.org/md_docs__usage__x_m_l__text__reference.html
+  A module that provides utility for building XML Text that allows composing
+  formatted text to be sent via chat commands.
   """
 
   require Bitwise
@@ -54,35 +51,8 @@ defmodule FLHook.XMLText do
   @doc """
   Creates a new XML text struct with the specified content.
   """
-  @spec new([
-          {:align, align}
-          | {:format, color}
-          | {:format, color, flag | [flag]}
-          | :paragraph
-          | {:text, String.Chars.t()}
-          | String.Chars.t()
-        ]) :: t
-  def new(nodes \\ []) do
-    Enum.reduce(nodes, %__MODULE__{}, fn
-      :paragraph, xml_text ->
-        paragraph(xml_text)
-
-      {:align, align}, xml_text ->
-        align(xml_text, align)
-
-      {:format, color}, xml_text ->
-        format(xml_text, color)
-
-      {:format, color, flags}, xml_text ->
-        format(xml_text, color, flags)
-
-      {:text, text}, xml_text ->
-        text(xml_text, text)
-
-      text, xml_text ->
-        text(xml_text, text)
-    end)
-  end
+  @spec new() :: t
+  def new, do: %__MODULE__{}
 
   @doc """
   Adds an alignment node to the specified XML text struct.
@@ -197,6 +167,6 @@ defmodule FLHook.XMLText do
   end
 
   defimpl String.Chars do
-    defdelegate to_string(xml_text), to: FLHook.XMLText
+    defdelegate to_string(xml_text), to: FLHook.XMLT
   end
 end

@@ -42,7 +42,7 @@ defmodule FLHook.Event do
         {:ok,
          %__MODULE__{
            type: type,
-           data: FLHook.Dict.parse(binary, spread: "text")
+           data: FLHook.Dict.parse(binary, rest: "text")
          }}
 
       _ ->

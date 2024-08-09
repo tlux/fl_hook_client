@@ -1,22 +1,25 @@
-defprotocol FLHook.Command do
+defmodule FLHook.Command do
   @moduledoc """
-  A protocol to implement custom commands.
+  The command module.
   """
 
-  @type serializable ::
-          String.t()
-          | [String.Chars.t()]
-          | {String.t(), [String.Chars.t()]}
+  alias FLHook.Utils
+
+  @char_map %{
+    "\r" => "\\r",
+    "\n" => "\\n"
+  }
 
   @typedoc """
-  Type representing a command.
+  Type representing an FLHook command string
   """
-  @type command :: t | serializable
+  @type command :: String.t()
 
-  @doc """
-  Returns a command string or tuple. It may even return another command except
-  itself.
-  """
-  @spec to_cmd(t) :: serializable
-  def to_cmd(cmd)
+  @doc false
+  @spec dump(command) :: String.t()
+  def dump(cmd) when is_binary(cmd) do
+    cmd
+    |> Utils.map_chars(@char_map)
+    |> then(&(&1 <> Utils.line_sep()))
+  end
 end

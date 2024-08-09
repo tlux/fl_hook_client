@@ -35,7 +35,7 @@ defmodule FLHook.DictTest do
     test "parses result" do
       assert Dict.parse(
                ~s(id=123 name=Truelight text=Hello World ignored=param\r\n),
-               spread: "text"
+               rest: "text"
              ) == %{
                "id" => "123",
                "name" => "Truelight",
@@ -44,7 +44,7 @@ defmodule FLHook.DictTest do
     end
 
     test "empty map when no matches in string" do
-      assert Dict.parse("Hello World", spread: "text") == %{}
+      assert Dict.parse("Hello World", rest: "text") == %{}
     end
   end
 end
