@@ -67,17 +67,19 @@ defmodule FLHook.Client do
   @doc """
   Starts the FLHook client using the given config or options.
   """
-  @spec start_link(Config.t() | Keyword.t()) :: GenServer.on_start()
+  @spec start_link(Config.t() | [keyword | GenServer.option()]) ::
+          GenServer.on_start()
   def start_link(%Config{} = config) do
     start_link(config, [])
   end
 
   def start_link(opts) when is_list(opts) do
-    {config_opts, start_opts} =
+    {config_opts, server_opts} =
       Keyword.split(opts, Map.keys(Config.__struct__()))
 
-    config = Config.new(config_opts)
-    start_link(config, start_opts)
+    config_opts
+    |> Config.new()
+    |> start_link(server_opts)
   end
 
   @doc """
@@ -158,6 +160,8 @@ defmodule FLHook.Client do
   end
 
   def init(config) do
+    Logger.metadata(host: config.host, port: config.port)
+
     state = %{
       config: config,
       queue: nil,
@@ -200,7 +204,7 @@ defmodule FLHook.Client do
                 {:ok, state}
 
               _ ->
-                log_error(error, config)
+                log_error(error)
                 {:stop, error, state}
             end
         end
@@ -212,7 +216,7 @@ defmodule FLHook.Client do
             {:ok, state}
 
           _ ->
-            log_error(error, config)
+            log_error(error)
             {:backoff, config.backoff_interval, state}
         end
     end
@@ -234,7 +238,7 @@ defmodule FLHook.Client do
         {:noconnect, state}
 
       error ->
-        log_error(error, state.config)
+        log_error(error)
         {:connect, :reconnect, state}
     end
   end
@@ -313,7 +317,7 @@ defmodule FLHook.Client do
 
     case Codec.decode(state.config.codec, msg) do
       {:ok, msg} ->
-        Logger.debug("[FLHook RECV] #{inspect(msg)}")
+        Logger.debug("RECV: #{inspect(msg)}")
 
         case Event.parse(msg) do
           {:ok, event} ->
@@ -324,7 +328,7 @@ defmodule FLHook.Client do
         end
 
       {:error, error} ->
-        log_error(error, state.config)
+        log_error(error)
         {:stop, error, state}
     end
   end
@@ -416,7 +420,7 @@ defmodule FLHook.Client do
     with {:socket, {:ok, value}} <-
            {:socket, config.tcp_adapter.recv(socket, 0, config.recv_timeout)},
          {:codec, {:ok, decoded}} <- {:codec, Codec.decode(config.codec, value)} do
-      Logger.debug("[FLHook RECV] #{inspect(decoded)}")
+      Logger.debug("RECV: #{inspect(decoded)}")
       {:ok, decoded}
     else
       {:codec, error} -> error
@@ -448,7 +452,7 @@ defmodule FLHook.Client do
   defp do_read_cmd_result(%Reply{} = reply, _socket, _config), do: reply
 
   defp send_msg(socket, config, value) do
-    Logger.debug("[FLHook SEND] #{inspect(value)}")
+    Logger.debug("SEND: #{inspect(value)}")
 
     with {:codec, {:ok, encoded}} <-
            {:codec, Codec.encode(config.codec, value)},
@@ -495,7 +499,7 @@ defmodule FLHook.Client do
   defp maybe_cancel_timer(nil), do: :ok
   defp maybe_cancel_timer(timer_ref), do: Process.cancel_timer(timer_ref)
 
-  defp log_error(error, config) do
-    Logger.error("FLHook (#{config.host}:#{config.port}): #{Exception.message(error)}")
+  defp log_error(error) do
+    Logger.error(fn -> Exception.message(error) end)
   end
 end
