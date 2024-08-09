@@ -475,7 +475,7 @@ defmodule FLHook.ClientTest do
 
       task =
         Task.async(fn ->
-          Client.cmd(client, {"addcash", ["Foobar", 1234]})
+          Client.cmd(client, "addcash Foobar 1234")
         end)
 
       assert eventually(fn -> command_queued?(client) end)
@@ -590,7 +590,7 @@ defmodule FLHook.ClientTest do
           catch_exit do
             task =
               Task.async(fn ->
-                Client.cmd(client, {"addcash", ["Foobar", 1234]})
+                Client.cmd(client, "addcash Foobar 1234")
               end)
 
             eventually(fn -> command_queued?(client) end)

@@ -7,8 +7,9 @@ defmodule FLHook.Client do
 
   require Logger
 
+  alias FLHook.Client.Request
   alias __MODULE__
-  alias FLHook.Client.Reply
+  alias FLHook.Client.Response
   alias FLHook.Codec
   alias FLHook.Command
   alias FLHook.CommandError
@@ -277,7 +278,10 @@ defmodule FLHook.Client do
     case send_cmd(state.socket, state.config, cmd) do
       {:ok, request_id} ->
         queue =
-          :queue.in(%Reply{request_id: request_id, client: from}, state.queue)
+          :queue.in(
+            %Response{request_id: request_id, client: from},
+            state.queue
+          )
 
         recv_timeout_ref =
           Process.send_after(self(), :timeout, state.config.recv_timeout)
@@ -320,7 +324,7 @@ defmodule FLHook.Client do
       {:ok, msg} ->
         case Event.parse(msg) do
           {:ok, event} ->
-            Logger.debug("recv #{inspect(msg)}")
+            Logger.debug("RECV #{inspect(msg)}")
             handle_event(event, state)
 
           :error ->
@@ -348,8 +352,8 @@ defmodule FLHook.Client do
     error = %SocketError{reason: :timeout}
 
     case :queue.out(state.queue) do
-      {{:value, reply}, new_queue} ->
-        Connection.reply(reply.client, {:error, error})
+      {{:value, response}, new_queue} ->
+        Connection.reply(response.client, {:error, error})
         {:disconnect, error, %{state | queue: new_queue, recv_timeout_ref: nil}}
 
       {:empty, _} ->
@@ -374,26 +378,26 @@ defmodule FLHook.Client do
     maybe_cancel_timer(state.recv_timeout_ref)
 
     case :queue.out(state.queue) do
-      {{:value, reply}, new_queue} ->
+      {{:value, response}, new_queue} ->
         Logger.debug(fn ->
-          {"recv #{inspect(msg)}", request_id: reply.request_id}
+          {"RECV #{inspect(msg)}", request_id: response.request_id}
         end)
 
-        case Reply.add_chunk(reply, msg) do
-          %{status: :pending} = reply ->
-            {:noreply, %{state | queue: :queue.in_r(reply, new_queue)}}
+        case Response.add_chunk(response, msg) do
+          %{status: :pending} = response ->
+            {:noreply, %{state | queue: :queue.in_r(response, new_queue)}}
 
-          %{status: :ok} = reply ->
+          %{status: :ok} = response ->
             Connection.reply(
-              reply.client,
-              {:ok, Reply.rows(reply)}
+              response.client,
+              {:ok, Response.rows(response)}
             )
 
             {:noreply, %{state | queue: new_queue}}
 
           %{status: {:error, detail}} ->
             Connection.reply(
-              reply.client,
+              response.client,
               {:error, %CommandError{detail: detail}}
             )
 
@@ -425,7 +429,7 @@ defmodule FLHook.Client do
            {:socket, config.tcp_adapter.recv(socket, 0, config.recv_timeout)},
          {:codec, {:ok, decoded}} <- {:codec, Codec.decode(config.codec, value)} do
       Logger.debug(fn ->
-        {"recv #{inspect(decoded)}", request_id: request_id}
+        {"RECV #{inspect(decoded)}", request_id: request_id}
       end)
 
       {:ok, decoded}
@@ -436,11 +440,11 @@ defmodule FLHook.Client do
   end
 
   defp read_cmd_result(socket, config, request_id) do
-    case do_read_cmd_result(%Reply{request_id: request_id}, socket, config) do
-      %Reply{status: :ok} = reply ->
-        {:ok, Reply.rows(reply)}
+    case do_read_cmd_result(%Response{request_id: request_id}, socket, config) do
+      %Response{status: :ok} = response ->
+        {:ok, Response.rows(response)}
 
-      %Reply{status: {:error, detail}} ->
+      %Response{status: {:error, detail}} ->
         {:error, %CommandError{detail: detail}}
 
       error ->
@@ -448,25 +452,31 @@ defmodule FLHook.Client do
     end
   end
 
-  defp do_read_cmd_result(%Reply{status: :pending} = reply, socket, config) do
-    with {:ok, chunk} <- read_chunk(socket, config, reply.request_id) do
-      reply
-      |> Reply.add_chunk(chunk)
+  defp do_read_cmd_result(
+         %Response{status: :pending} = response,
+         socket,
+         config
+       ) do
+    with {:ok, chunk} <- read_chunk(socket, config, response.request_id) do
+      response
+      |> Response.add_chunk(chunk)
       |> do_read_cmd_result(socket, config)
     end
   end
 
-  defp do_read_cmd_result(%Reply{} = reply, _socket, _config), do: reply
+  defp do_read_cmd_result(%Response{} = response, _socket, _config) do
+    response
+  end
 
   defp send_cmd(socket, config, cmd) do
     with {:codec, {:ok, encoded}} <-
            {:codec, Codec.encode(config.codec, Command.dump(cmd))},
          {:socket, :ok} <- {:socket, config.tcp_adapter.send(socket, encoded)} do
-      request_id = generate_request_id()
+      request_id = Request.random_id()
 
       Logger.debug(fn ->
         payload = cmd |> mask_string(config.password) |> Command.dump()
-        {"send #{inspect(payload)}", request_id: request_id}
+        {"SEND #{inspect(payload)}", request_id: request_id}
       end)
 
       {:ok, request_id}
@@ -507,15 +517,6 @@ defmodule FLHook.Client do
 
   defp maybe_cancel_timer(nil), do: :ok
   defp maybe_cancel_timer(timer_ref), do: Process.cancel_timer(timer_ref)
-
-  @request_id_length 8
-
-  defp generate_request_id do
-    @request_id_length
-    |> :crypto.strong_rand_bytes()
-    |> Base.url_encode64()
-    |> binary_part(0, @request_id_length)
-  end
 
   defp log_error(error) do
     Logger.error(fn -> Exception.message(error) end)

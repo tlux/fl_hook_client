@@ -1,6 +1,7 @@
-defmodule FLHook.Client.Reply do
+defmodule FLHook.Client.Response do
   @moduledoc false
 
+  alias FLHook.Client.Request
   alias FLHook.Utils
 
   @enforce_keys [:request_id]
@@ -9,16 +10,16 @@ defmodule FLHook.Client.Reply do
   @type t :: %__MODULE__{
           chardata: IO.chardata(),
           client: nil | GenServer.from(),
-          request_id: String.t(),
+          request_id: Request.id(),
           rows: [binary],
           status: :pending | :ok | {:error, String.t()}
         }
 
   @spec add_chunk(t, binary) :: t
-  def add_chunk(%__MODULE__{status: :pending} = reply, chunk) do
-    data = [reply.chardata, chunk]
+  def add_chunk(%__MODULE__{status: :pending} = response, chunk) do
+    chardata = [response.chardata, chunk]
 
-    data
+    chardata
     |> IO.chardata_to_string()
     |> String.splitter(Utils.line_sep())
     |> Enum.reduce_while({:pending, []}, fn
@@ -35,7 +36,7 @@ defmodule FLHook.Client.Reply do
         {:halt, acc}
     end)
     |> then(fn {status, rows} ->
-      %{reply | chardata: data, status: status, rows: rows}
+      %{response | chardata: chardata, status: status, rows: rows}
     end)
   end
 
