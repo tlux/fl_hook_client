@@ -13,12 +13,13 @@ defmodule FLHook.Command do
   @typedoc """
   Type representing an FLHook command string
   """
-  @type command :: String.t()
+  @type command :: String.Chars.t()
 
   @doc false
   @spec dump(command) :: String.t()
   def dump(cmd) when is_binary(cmd) do
     cmd
+    |> to_string()
     |> Utils.map_chars(@char_map)
     |> then(&(&1 <> Utils.line_sep()))
   end

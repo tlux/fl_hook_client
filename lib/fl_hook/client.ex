@@ -126,8 +126,8 @@ defmodule FLHook.Client do
   @spec cmd(client, Command.command(), timeout) ::
           {:ok, [binary]} | {:error, Exception.t()}
   @impl FLHook.ClientBehavior
-  def cmd(client, cmd, timeout \\ @client_timeout) when is_binary(cmd) do
-    Connection.call(client, {:cmd, cmd}, timeout)
+  def cmd(client, command, timeout \\ @client_timeout) do
+    Connection.call(client, {:cmd, command}, timeout)
   end
 
   @doc false
@@ -274,12 +274,12 @@ defmodule FLHook.Client do
     {:disconnect, {:close, from}, state}
   end
 
-  def handle_call({:cmd, _cmd}, _from, %{socket: nil} = state) do
+  def handle_call({:cmd, _command}, _from, %{socket: nil} = state) do
     {:reply, {:error, %SocketError{reason: :closed}}, state}
   end
 
-  def handle_call({:cmd, cmd}, from, state) do
-    case send_cmd(state.socket, state.config, cmd) do
+  def handle_call({:cmd, command}, from, state) do
+    case send_cmd(state.socket, state.config, command) do
       {:ok, request_id} ->
         queue =
           :queue.in(
