@@ -1,6 +1,6 @@
-defmodule FLHook.CommandError do
+defmodule FLHook.ResponseError do
   @moduledoc """
-  An error indicating a command returned unsuccessfully.
+  An error indicating a response error.
   """
 
   @enforce_keys [:detail]

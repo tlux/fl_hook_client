@@ -10,14 +10,15 @@ defmodule FLHook.Dict do
 
   ## Options
 
-  - `:rest` - A key that defines the last value in the dictionary.
-    All key/value pairs following this key will not create new map entries.
+  - `:expand` - A key that defines the last value in the dictionary.
+    All key/value pairs following this key will be ut in the last added map
+    item.
   """
   @spec parse(binary, Keyword.t()) :: map
   def parse(binary, opts \\ []) when is_binary(binary) do
     str = String.trim_trailing(binary, Utils.line_sep())
     str_len = String.length(str)
-    rest = opts[:rest]
+    expand = opts[:expand]
 
     ~r/(?<key>\w+)\=(?<value>\S+)/
     |> Regex.scan(str, captures: [:key, :value], return: :index)
@@ -26,7 +27,7 @@ defmodule FLHook.Dict do
       fn [_, {key_idx, key_len}, {value_idx, value_len}], map ->
         key = String.slice(str, key_idx, key_len)
 
-        if key == rest do
+        if key == expand do
           value = String.slice(str, value_idx, str_len - value_idx)
           {:halt, Map.put(map, key, value)}
         else

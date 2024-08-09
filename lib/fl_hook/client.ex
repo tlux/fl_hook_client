@@ -3,6 +3,8 @@ defmodule FLHook.Client do
   A client to connect to a FLHook socket.
   """
 
+  @behaviour FLHook.ClientBehavior
+
   use Connection
 
   require Logger
@@ -12,11 +14,11 @@ defmodule FLHook.Client do
   alias FLHook.Client.Response
   alias FLHook.Codec
   alias FLHook.Command
-  alias FLHook.CommandError
   alias FLHook.Config
   alias FLHook.ConfigError
   alias FLHook.Event
   alias FLHook.HandshakeError
+  alias FLHook.ResponseError
   alias FLHook.SocketError
 
   @welcome_msg "Welcome to FLHack"
@@ -68,6 +70,7 @@ defmodule FLHook.Client do
   """
   @spec start_link(Config.t() | [keyword | GenServer.option()]) ::
           GenServer.on_start()
+  @impl FLHook.ClientBehavior
   def start_link(%Config{} = config) do
     start_link(config, [])
   end
@@ -85,6 +88,7 @@ defmodule FLHook.Client do
   Starts the FLHook client using the given config and options.
   """
   @spec start_link(Config.t(), GenServer.options()) :: GenServer.on_start()
+  @impl FLHook.ClientBehavior
   def start_link(%Config{} = config, opts) do
     Connection.start_link(__MODULE__, config, opts)
   end
@@ -101,22 +105,19 @@ defmodule FLHook.Client do
   Closes the connection.
   """
   @spec close(client, timeout) :: :ok
+  @impl FLHook.ClientBehavior
   def close(client, timeout \\ @client_timeout) do
     Connection.call(client, :close, timeout)
   end
 
-  @doc """
-  Determines whether the socket is connected.
-  """
-  @spec connected?(client, timeout) :: boolean
+  @doc false
+  @impl FLHook.ClientBehavior
   def connected?(client, timeout \\ @client_timeout) do
     Connection.call(client, :connected?, timeout)
   end
 
-  @doc """
-  Determines whether the client is in event mode.
-  """
-  @spec event_mode?(client, timeout) :: boolean
+  @doc false
+  @impl FLHook.ClientBehavior
   def event_mode?(client, timeout \\ @client_timeout) do
     Connection.call(client, :event_mode?, timeout)
   end
@@ -124,18 +125,21 @@ defmodule FLHook.Client do
   @doc false
   @spec cmd(client, Command.command(), timeout) ::
           {:ok, [binary]} | {:error, Exception.t()}
+  @impl FLHook.ClientBehavior
   def cmd(client, cmd, timeout \\ @client_timeout) when is_binary(cmd) do
     Connection.call(client, {:cmd, cmd}, timeout)
   end
 
   @doc false
   @spec subscribe(client, pid, timeout) :: :ok
+  @impl FLHook.ClientBehavior
   def subscribe(client, listener \\ self(), timeout \\ @client_timeout) do
     Connection.call(client, {:subscribe, listener}, timeout)
   end
 
   @doc false
   @spec unsubscribe(client, pid, timeout) :: :ok
+  @impl FLHook.ClientBehavior
   def unsubscribe(client, listener \\ self(), timeout \\ @client_timeout) do
     Connection.call(client, {:unsubscribe, listener}, timeout)
   end
@@ -398,7 +402,7 @@ defmodule FLHook.Client do
           %{status: {:error, detail}} ->
             Connection.reply(
               response.client,
-              {:error, %CommandError{detail: detail}}
+              {:error, %ResponseError{detail: detail}}
             )
 
             {:noreply, %{state | queue: new_queue}}
@@ -445,7 +449,7 @@ defmodule FLHook.Client do
         {:ok, Response.rows(response)}
 
       %Response{status: {:error, detail}} ->
-        {:error, %CommandError{detail: detail}}
+        {:error, %ResponseError{detail: detail}}
 
       error ->
         error

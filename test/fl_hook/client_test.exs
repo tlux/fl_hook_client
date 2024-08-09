@@ -8,11 +8,11 @@ defmodule FLHook.ClientTest do
   alias FLHook.Client
   alias FLHook.Codec
   alias FLHook.CodecError
-  alias FLHook.CommandError
   alias FLHook.Config
   alias FLHook.Event
   alias FLHook.MockInetAdapter
   alias FLHook.MockTCPAdapter
+  alias FLHook.ResponseError
   alias FLHook.SocketError
 
   setup :set_mox_global
@@ -550,7 +550,7 @@ defmodule FLHook.ClientTest do
       )
 
       assert Task.await(task) ==
-               {:error, %CommandError{detail: "player not logged in"}}
+               {:error, %ResponseError{detail: "player not logged in"}}
     end
 
     test "connection closed error", %{client: client, socket: socket} do

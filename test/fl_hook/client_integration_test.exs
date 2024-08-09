@@ -2,7 +2,7 @@ defmodule FLHook.ClientIntegrationTest do
   use ExUnit.Case
 
   alias FLHook.Client
-  alias FLHook.CommandError
+  alias FLHook.ResponseError
   alias FLHook.SocketError
 
   @moduletag :integration
@@ -13,13 +13,13 @@ defmodule FLHook.ClientIntegrationTest do
     assert {:ok, [%{"uptime" => _, "serverload" => _, "npcspawn" => _}]} =
              Client.cmd(client, "serverinfo")
 
-    assert {:ok, _} = Client.cmd(client, {"msgu", ["Hello FLHook!"]})
+    assert {:ok, _} = Client.cmd(client, "msgu Hello FLHook!")
   end
 
   test "command error" do
     client = start_client!()
 
-    assert {:error, %CommandError{} = error} = Client.cmd(client, "invalid")
+    assert {:error, %ResponseError{} = error} = Client.cmd(client, "invalid")
     assert Exception.message(error) == "unknown command"
   end
 

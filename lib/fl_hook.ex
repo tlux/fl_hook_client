@@ -77,6 +77,8 @@ defmodule FLHook do
   alias FLHook.Dict
   alias FLHook.RowsCountError
 
+  @client Application.compile_env(:fl_hook_client, :client, Client)
+
   @client_timeout :infinity
 
   @typedoc """
@@ -91,7 +93,7 @@ defmodule FLHook do
 
   @doc since: "3.0.0"
   @spec connect(FLHook.Config.t() | Keyword.t()) :: GenServer.on_start()
-  defdelegate connect(opts \\ []), to: Client, as: :start_link
+  defdelegate connect(opts \\ []), to: @client, as: :start_link
 
   @doc since: "3.0.0"
   @spec disconnect(client, timeout) :: :ok
@@ -99,21 +101,21 @@ defmodule FLHook do
                 client,
                 timeout \\ @client_timeout
               ),
-              to: Client,
+              to: @client,
               as: :close
 
   @doc since: "3.0.0"
   @spec connected?(client, timeout) :: boolean
-  defdelegate connected?(client, timeout \\ @client_timeout), to: Client
+  defdelegate connected?(client, timeout \\ @client_timeout), to: @client
 
   @doc since: "3.0.0"
   @spec event_mode?(client, timeout) :: boolean
-  defdelegate event_mode?(client, timeout \\ @client_timeout), to: Client
+  defdelegate event_mode?(client, timeout \\ @client_timeout), to: @client
 
   @deprecated "Use `exec/2` or `exec/3` instead"
   defdelegate cmd(
                 client,
-                cmd,
+                command,
                 timeout \\ @client_timeout
               ),
               to: __MODULE__,
@@ -122,7 +124,7 @@ defmodule FLHook do
   @deprecated "Use `exec!/2` or `exec!/3` instead"
   defdelegate cmd!(
                 client,
-                cmd,
+                command,
                 timeout \\ @client_timeout
               ),
               to: __MODULE__,
@@ -136,10 +138,10 @@ defmodule FLHook do
           {:ok, [binary]} | {:error, Exception.t()}
   defdelegate exec(
                 client,
-                cmd,
+                command,
                 timeout \\ @client_timeout
               ),
-              to: Client,
+              to: @client,
               as: :cmd
 
   @doc """
@@ -148,9 +150,9 @@ defmodule FLHook do
   """
   @doc since: "3.0.0"
   @spec exec!(client, command, timeout) :: [binary] | no_return
-  def exec!(client, cmd, timeout \\ @client_timeout) do
+  def exec!(client, command, timeout \\ @client_timeout) do
     client
-    |> exec(cmd, timeout)
+    |> exec(command, timeout)
     |> bang!()
   end
 
@@ -158,17 +160,17 @@ defmodule FLHook do
   Sends a command to the socket without returning the result.
   """
   @spec run(client, command, timeout) :: :ok | {:error, Exception.t()}
-  def run(client, cmd, timeout \\ @client_timeout) do
-    with {:ok, _} <- cmd(client, cmd, timeout), do: :ok
+  def run(client, command, timeout \\ @client_timeout) do
+    with {:ok, _} <- exec(client, command, timeout), do: :ok
   end
 
   @doc """
   Sends a command to the socket without returning the result. Raises on error.
   """
   @spec run!(client, command, timeout) :: :ok | no_return
-  def run!(client, cmd, timeout \\ @client_timeout) do
+  def run!(client, command, timeout \\ @client_timeout) do
     client
-    |> exec(cmd, timeout)
+    |> run(command, timeout)
     |> bang!()
   end
 
@@ -178,8 +180,8 @@ defmodule FLHook do
   @doc since: "3.0.0"
   @spec all(client, command, Keyword.t(), timeout) ::
           {:ok, [map]} | {:error, Exception.t()}
-  def all(client, cmd, opts \\ [], timeout \\ @client_timeout) do
-    with {:ok, rows} <- cmd(client, cmd, timeout) do
+  def all(client, command, opts \\ [], timeout \\ @client_timeout) do
+    with {:ok, rows} <- cmd(client, command, timeout) do
       {:ok, Enum.map(rows, &Dict.parse(&1, opts))}
     end
   end
@@ -190,9 +192,9 @@ defmodule FLHook do
   """
   @doc since: "3.0.0"
   @spec all!(client, command, Keyword.t(), timeout) :: [map] | no_return
-  def all!(client, cmd, opts \\ [], timeout \\ @client_timeout) do
+  def all!(client, command, opts \\ [], timeout \\ @client_timeout) do
     client
-    |> all(cmd, opts, timeout)
+    |> all(command, opts, timeout)
     |> bang!()
   end
 
@@ -202,8 +204,8 @@ defmodule FLHook do
   @doc since: "3.0.0"
   @spec one(client, command, Keyword.t(), timeout) ::
           {:ok, map | nil} | {:error, Exception.t()}
-  def one(client, cmd, opts \\ [], timeout \\ @client_timeout) do
-    case cmd(client, cmd, timeout) do
+  def one(client, command, opts \\ [], timeout \\ @client_timeout) do
+    case exec(client, command, timeout) do
       {:ok, []} -> {:ok, nil}
       {:ok, [row | _]} -> {:ok, Dict.parse(row, opts)}
       {:error, _} = error -> error
@@ -216,9 +218,9 @@ defmodule FLHook do
   """
   @doc since: "3.0.0"
   @spec one!(client, command, Keyword.t(), timeout) :: map | nil
-  def one!(client, cmd, opts \\ [], timeout \\ @client_timeout) do
+  def one!(client, command, opts \\ [], timeout \\ @client_timeout) do
     client
-    |> one(cmd, opts, timeout)
+    |> one(command, opts, timeout)
     |> bang!()
   end
 
@@ -229,8 +231,8 @@ defmodule FLHook do
   @doc since: "3.0.0"
   @spec single(client, command, Keyword.t(), timeout) ::
           {:ok, map} | {:error, Exception.t()}
-  def single(client, cmd, opts \\ [], timeout \\ @client_timeout) do
-    case cmd(client, cmd, timeout) do
+  def single(client, command, opts \\ [], timeout \\ @client_timeout) do
+    case exec(client, command, timeout) do
       {:ok, [row]} ->
         {:ok, Dict.parse(row, opts)}
 
@@ -264,7 +266,7 @@ defmodule FLHook do
                 listener \\ self(),
                 timeout \\ @client_timeout
               ),
-              to: Client
+              to: @client
 
   @doc """
   Removes the event listener for the specified process.
@@ -276,8 +278,9 @@ defmodule FLHook do
                 listener \\ self(),
                 timeout \\ @client_timeout
               ),
-              to: Client
+              to: @client
 
+  defp bang!(:ok), do: :ok
   defp bang!({:ok, result}), do: result
   defp bang!({:error, error}), do: raise(error)
 end

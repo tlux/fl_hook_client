@@ -7,3 +7,5 @@ config :fl_hook_client, FLHook.TestClient,
   inet_adapter: FLHook.MockInetAdapter,
   password: "Test1234",
   tcp_adapter: FLHook.MockTCPAdapter
+
+config :fl_hook_client, :client, FLHook.MockClient
