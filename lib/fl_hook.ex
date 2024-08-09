@@ -74,6 +74,7 @@ defmodule FLHook do
   """
 
   alias FLHook.Client
+  alias FLHook.Config
   alias FLHook.Dict
   alias FLHook.RowsCountError
 
@@ -84,7 +85,7 @@ defmodule FLHook do
   @typedoc """
   Type representing a FLHook client process.
   """
-  @type client :: FLHook.Client.client()
+  @type client :: Client.client()
 
   @typedoc """
   Type representing a FLHook command.
@@ -92,8 +93,12 @@ defmodule FLHook do
   @type command :: FLHook.Command.command()
 
   @doc since: "3.0.0"
-  @spec connect(FLHook.Config.t() | Keyword.t()) :: GenServer.on_start()
-  defdelegate connect(opts \\ []), to: @client, as: :start_link
+  @spec connect(Config.t() | Keyword.t()) :: GenServer.on_start()
+  defdelegate connect(config_or_opts), to: @client, as: :start_link
+
+  @doc since: "3.0.0"
+  @spec connect(Config.t(), GenServer.options()) :: GenServer.on_start()
+  defdelegate connect(config, opts), to: @client, as: :start_link
 
   @doc since: "3.0.0"
   @spec disconnect(client, timeout) :: :ok
