@@ -16,10 +16,9 @@ defmodule FLHook.Command do
   @type command :: String.Chars.t()
 
   @doc false
-  @spec dump(command) :: String.t()
+  @spec dump(String.t()) :: String.t()
   def dump(cmd) when is_binary(cmd) do
     cmd
-    |> to_string()
     |> Utils.map_chars(@char_map)
     |> then(&(&1 <> Utils.line_sep()))
   end

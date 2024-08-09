@@ -473,6 +473,9 @@ defmodule FLHook.Client do
   end
 
   defp send_cmd(socket, config, cmd) do
+    # Value should implement String.Chars protocol, not necessarily be a string
+    cmd = to_string(cmd)
+
     with {:codec, {:ok, encoded}} <-
            {:codec, Codec.encode(config.codec, Command.dump(cmd))},
          {:socket, :ok} <- {:socket, config.tcp_adapter.send(socket, encoded)} do
