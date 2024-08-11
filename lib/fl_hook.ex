@@ -80,7 +80,7 @@ defmodule FLHook do
 
   @client Application.compile_env(:fl_hook_client, :client, Client)
 
-  @client_timeout :infinity
+  @client_timeout 60_000
 
   @typedoc """
   Type representing a FLHook client process.

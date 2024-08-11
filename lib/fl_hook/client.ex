@@ -22,7 +22,8 @@ defmodule FLHook.Client do
   alias FLHook.SocketError
 
   @welcome_msg "Welcome to FLHack"
-  @client_timeout :infinity
+
+  @client_timeout 60_000
 
   @typedoc """
   Type representing a FLHook client process.
