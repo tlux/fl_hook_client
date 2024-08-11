@@ -9,9 +9,8 @@ defmodule FLHook.Client do
 
   require Logger
 
-  alias FLHook.Client.Request
   alias __MODULE__
-  alias FLHook.Client.Response
+  alias FLHook.Client.{Request, Response}
   alias FLHook.Codec
   alias FLHook.Command
   alias FLHook.Config
