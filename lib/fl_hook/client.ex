@@ -22,7 +22,7 @@ defmodule FLHook.Client do
 
   @welcome_msg "Welcome to FLHack"
 
-  @client_timeout 60_000
+  @client_timeout :infinity
 
   @typedoc """
   Type representing a FLHook client process.
