@@ -197,6 +197,7 @@ defmodule FLHook.Client do
             config.tcp_adapter.close(socket)
             state = %{state | socket: nil}
 
+            # credo:disable-for-next-line Credo.Check.Refactor.Nesting
             case info do
               {:open, from} ->
                 Connection.reply(from, {:error, error})
