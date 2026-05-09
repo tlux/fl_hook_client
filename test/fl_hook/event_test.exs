@@ -8,7 +8,7 @@ defmodule FLHook.EventTest do
     test "parse known event with params" do
       event_types = Event.__event_types__()
 
-      assert length(event_types) > 0
+      refute Enum.empty?(event_types)
 
       Enum.each(event_types, fn event_type ->
         assert Event.parse(

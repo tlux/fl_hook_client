@@ -14,15 +14,6 @@ defmodule FLHook.MixProject do
       deps: deps(),
       package: package(),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
-        "coveralls.detail": :test,
-        "coveralls.html": :test,
-        "coveralls.post": :test,
-        coveralls: :test,
-        credo: :test,
-        dialyzer: :test,
-        test: :test
-      ],
       dialyzer: dialyzer(),
 
       # Docs
@@ -35,6 +26,20 @@ defmodule FLHook.MixProject do
   def application do
     [
       extra_applications: [:logger]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_cli_env: [
+        "coveralls.detail": :test,
+        "coveralls.html": :test,
+        "coveralls.post": :test,
+        coveralls: :test,
+        credo: :test,
+        dialyzer: :test,
+        test: :test
+      ]
     ]
   end
 
